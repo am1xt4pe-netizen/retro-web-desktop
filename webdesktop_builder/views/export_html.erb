@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= h(@desktop['manifest_name'] || @desktop['name']) %></title>
+  <!-- This is a standalone export: manifest.json/service-worker.js are not
+       included, so PWA install only works from the live published URL,
+       not from this downloaded file. Gallery/uploaded-file images ARE
+       embedded below as data URIs, so this file works fully offline. -->
+  <meta name="theme-color" content="<%= @desktop['manifest_theme_color'] || '#008080' %>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: <%= @desktop['font_family'] || 'Tahoma, sans-serif' %>;
+      background-color: <%= @desktop['background_color'] || '#008080' %>;
+      <% if @desktop['background_image'] && !@desktop['background_image'].to_s.empty? %>
+      background-image: url('<%= @desktop['background_image'] %>');
+      background-repeat: <%= @desktop['background_repeat'] || 'no-repeat' %>;
+      background-size: <%= @desktop['background_size'] || 'cover' %>;
+      <% if @desktop['wallpaper_style'] == 'tile' %>
+      background-repeat: repeat;
+      background-size: auto;
+      <% elsif @desktop['wallpaper_style'] == 'center' %>
+      background-position: center;
+      background-size: auto;
+      <% elsif @desktop['wallpaper_style'] == 'fit' %>
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      <% end %>
+      <% end %>
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+    }
+
+    .desktop { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+    .desktop-icon {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 2px;
+      transition: background 0.2s;
+      width: <%= (@desktop['icon_size'] || 48) + 32 %>px;
+    }
+    .desktop-icon:hover { background: rgba(0, 0, 139, 0.3); border: 1px dotted white; }
+    .desktop-icon svg,
+    .desktop-icon .icon-emoji {
+      width: <%= @desktop['icon_size'] || 48 %>px;
+      height: <%= @desktop['icon_size'] || 48 %>px;
+      filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
+    }
+    .desktop-icon .icon-label {
+      color: white; font-size: 11px; text-align: center;
+      text-shadow: 1px 1px 1px black; margin-top: 2px;
+      max-width: <%= (@desktop['icon_size'] || 48) + 24 %>px;
+      word-wrap: break-word; line-height: 1.2;
+    }
+
+    .taskbar {
+      position: fixed;
+      <%= @desktop['taskbar_position'] || 'bottom' %>: 0;
+      <% if @desktop['taskbar_position'] == 'top' %>
+      top: 0; left: 0; right: 0; height: 40px;
+      <% elsif @desktop['taskbar_position'] == 'left' %>
+      left: 0; top: 0; bottom: 0; width: 60px; flex-direction: column;
+      <% elsif @desktop['taskbar_position'] == 'right' %>
+      right: 0; top: 0; bottom: 0; width: 60px; flex-direction: column;
+      <% else %>
+      bottom: 0; left: 0; right: 0; height: 40px;
+      <% end %>
+      background: <%= @desktop['taskbar_color'] || '#c0c0c0' %>;
+      display: flex; align-items: center; padding: 2px;
+      z-index: 1000; box-shadow: 0 -2px 4px rgba(0,0,0,0.3); gap: 4px;
+    }
+    .taskbar .start-btn {
+      background: <%= @desktop['taskbar_color'] || '#c0c0c0' %>;
+      border: 2px outset; padding: 4px 12px;
+      font-weight: bold; font-size: 12px; cursor: pointer;
+    }
+    .taskbar-clock {
+      margin-left: auto; border: 2px inset; padding: 2px 8px;
+      font-size: 12px; font-family: monospace;
+    }
+
+    .window {
+      position: absolute;
+      background: <%= @desktop['window_theme'] == 'dark' ? '#333' : '#c0c0c0' %>;
+      border: 2px outset;
+      min-width: 200px; min-height: 150px; display: none; flex-direction: column;
+      box-shadow: 4px 4px 8px rgba(0,0,0,0.3); z-index: 100;
+    }
+    .window.active { display: flex; }
+    .window-titlebar {
+      background: <%= @desktop['window_theme'] == 'modern' ? '#0078d7' : (@desktop['window_theme'] == 'dark' ? '#444' : '#000080') %>;
+      color: white; padding: 2px 4px;
+      display: flex; align-items: center; justify-content: space-between; cursor: move;
+    }
+    .window-title { font-size: 12px; font-weight: bold; }
+    .window-buttons { display: flex; gap: 2px; }
+    .window-btn {
+      width: 16px; height: 14px;
+      background: <%= @desktop['window_theme'] == 'dark' ? '#555' : '#c0c0c0' %>;
+      border: 1px outset; font-size: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; color: black;
+    }
+    .window-content {
+      flex: 1; padding: 8px; overflow: auto;
+      background: <%= @desktop['window_theme'] == 'dark' ? '#222' : 'white' %>;
+      color: <%= @desktop['window_theme'] == 'dark' ? '#eee' : 'black' %>;
+    }
+
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .gallery-item img { width: 100%; height: 100px; object-fit: cover; border: 2px inset; cursor: pointer; }
+    .gallery-item .caption { font-size: 10px; text-align: center; margin-top: 2px; }
+    .document-view { padding: 16px; line-height: 1.6; }
+    .game-embed { width: 100%; height: 400px; border: 2px inset; }
+    .start-menu {
+      position: fixed; bottom: 40px; left: 0; width: 200px;
+      background: <%= @desktop['taskbar_color'] || '#c0c0c0' %>;
+      border: 2px outset; display: none; flex-direction: column; z-index: 1001;
+    }
+    .start-menu-item { padding: 6px 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .start-menu-item:hover { background: #000080; color: white; }
+    .start-menu-divider { height: 1px; background: #808080; margin: 2px 4px; }
+
+    <%= @desktop['custom_css'] %>
+  </style>
+</head>
+<body>
+  <div class="desktop" id="desktop">
+    <% @items.each do |item| %>
+      <div class="desktop-icon"
+           style="left: <%= item['x_position'] %>px; top: <%= item['y_position'] %>px;"
+           data-type="<%= h item['item_type'] %>"
+           data-id="<%= item['id'] %>"
+           <% if item['url'] %>data-url="<%= h item['url'] %>"<% end %>
+           onclick="openItem(<%= item['id'] %>, '<%= item['item_type'] %>', '<%= js_attr item['name'] %>')">
+        <% icon_data = @icons.find { |i| i['name'] == item['icon'] } %>
+        <% if icon_data %>
+          <%= icon_data['svg_data'] %>
+        <% else %>
+          <span class="icon-emoji">📄</span>
+        <% end %>
+        <span class="icon-label"><%= h item['name'] %></span>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="taskbar">
+    <button class="start-btn" onclick="toggleStartMenu()">🪟 Start</button>
+    <div class="taskbar-clock" id="clock">12:00 PM</div>
+  </div>
+
+  <div class="start-menu" id="start-menu">
+    <% @items.select { |i| ['folder', 'gallery', 'game', 'retro_game'].include?(i['item_type']) }.each do |item| %>
+      <div class="start-menu-item" onclick="openItem(<%= item['id'] %>, '<%= item['item_type'] %>', '<%= js_attr item['name'] %>')">
+        <span><%= h item['name'] %></span>
+      </div>
+    <% end %>
+    <div class="start-menu-divider"></div>
+  </div>
+
+  <div id="windows-container"></div>
+
+  <script>
+    // Embedded data (images/files are data URIs, so this file works offline)
+    const ITEMS = <%= safe_json @items %>;
+    const GALLERY = <%= safe_json @gallery_images %>;
+    const DOCS = <%= safe_json @documents %>;
+    const GAMES = <%= safe_json @retro_games %>;
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent =
+        now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function toggleStartMenu() {
+      const menu = document.getElementById('start-menu');
+      menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.start-btn') && !e.target.closest('#start-menu')) {
+        document.getElementById('start-menu').style.display = 'none';
+      }
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    let windowCounter = 0;
+    const openWindows = new Map();
+
+    function openItem(id, type, name) {
+      const existing = document.getElementById('window-' + id);
+      if (existing) { existing.style.zIndex = ++windowCounter; return; }
+
+      if (type === 'link') {
+        const el = document.querySelector(`[data-id="${id}"]`);
+        const url = el && el.dataset.url;
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      const win = document.createElement('div');
+      win.className = 'window active';
+      win.id = 'window-' + id;
+      win.style.left = (50 + (openWindows.size * 30)) + 'px';
+      win.style.top = (50 + (openWindows.size * 30)) + 'px';
+      win.style.width = '500px';
+      win.style.height = '400px';
+      win.style.zIndex = ++windowCounter;
+
+      let content = '';
+      switch (type) {
+        case 'folder': content = renderFolder(); break;
+        case 'gallery': content = renderGallery(); break;
+        case 'text': content = renderText(id); break;
+        case 'image': content = renderImage(id); break;
+        case 'file': content = renderFile(id, name); break;
+        case 'game':
+        case 'retro_game': content = renderGame(id); break;
+        default: content = '<div class="document-view"><p>Item: ' + escapeHtml(name) + '</p></div>';
+      }
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'window-titlebar';
+      titleEl.onmousedown = (e) => startDrag(e, win.id);
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'window-title';
+      titleSpan.textContent = name;
+      const btnWrap = document.createElement('div');
+      btnWrap.className = 'window-buttons';
+      btnWrap.innerHTML = `
+        <button class="window-btn" onclick="minimizeWindow('${win.id}')">_</button>
+        <button class="window-btn" onclick="maximizeWindow('${win.id}')">□</button>
+        <button class="window-btn" onclick="closeWindow('${win.id}')">×</button>
+      `;
+      titleEl.appendChild(titleSpan);
+      titleEl.appendChild(btnWrap);
+
+      const contentEl = document.createElement('div');
+      contentEl.className = 'window-content';
+      contentEl.innerHTML = content;
+
+      win.appendChild(titleEl);
+      win.appendChild(contentEl);
+      document.getElementById('windows-container').appendChild(win);
+      openWindows.set(win.id, win);
+      win.addEventListener('mousedown', () => { win.style.zIndex = ++windowCounter; });
+    }
+
+    function renderFolder() {
+      const items = ITEMS.filter(i => i.item_type === 'file' || i.item_type === 'text');
+      let html = '<div style="padding: 8px;">';
+      items.forEach(item => {
+        const safeName = escapeHtml(item.name);
+        html += `<div style="padding: 4px; cursor: pointer;" onclick="openItem(${item.id}, '${item.item_type}', '${safeName.replace(/'/g, "\\'")}')">📄 ${safeName}</div>`;
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function renderGallery() {
+      let html = '<div class="gallery-grid">';
+      GALLERY.forEach(img => {
+        const caption = img.caption ? escapeHtml(img.caption) : '';
+        const src = img.data_uri; // embedded, works offline
+        html += `
+          <div class="gallery-item">
+            <img src="${src}" alt="${caption}" onclick="window.open(this.src, '_blank')">
+            ${caption ? `<div class="caption">${caption}</div>` : ''}
+          </div>
+        `;
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function renderText(id) {
+      const doc = DOCS.find(d => d.id == id);
+      if (doc) {
+        return `<div class="document-view">${doc.content || '<p>Empty document</p>'}</div>`;
+      }
+      return '<div class="document-view"><p>Document not found</p></div>';
+    }
+
+    function renderImage(id) {
+      const item = ITEMS.find(i => i.id == id);
+      const src = item && item.data_uri ? item.data_uri : '';
+      return `<div style="padding:8px;text-align:center;height:100%;"><img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain;"></div>`;
+    }
+
+    function renderFile(id, name) {
+      const item = ITEMS.find(i => i.id == id);
+      const safeName = escapeHtml(name);
+      if (item && item.data_uri) {
+        return `<div style="padding:16px;text-align:center;">
+          <p>📄 ${safeName}</p>
+          <a href="${item.data_uri}" download="${safeName}">Download file</a>
+        </div>`;
+      }
+      return `<div style="padding:16px;text-align:center;"><p>📄 ${safeName}</p></div>`;
+    }
+
+    function renderGame(id) {
+      const game = GAMES.find(g => g.id == id);
+      if (game) {
+        return `<div style="width:100%;height:100%;"><iframe src="${game.embed_url}" class="game-embed" allowfullscreen></iframe></div>`;
+      }
+      return '<div class="document-view"><p>Game not found</p></div>';
+    }
+
+    function closeWindow(id) {
+      const win = document.getElementById(id);
+      if (win) { win.remove(); openWindows.delete(id); }
+    }
+    function minimizeWindow(id) {
+      const win = document.getElementById(id);
+      if (win) win.style.display = 'none';
+    }
+    function maximizeWindow(id) {
+      const win = document.getElementById(id);
+      if (!win) return;
+      if (win.style.width === '100%') {
+        win.style.width = '500px'; win.style.height = '400px';
+        win.style.left = '50px'; win.style.top = '50px';
+      } else {
+        win.style.width = '100%'; win.style.height = 'calc(100% - 40px)';
+        win.style.left = '0'; win.style.top = '0';
+      }
+    }
+
+    let dragWindow = null, dragOffsetX = 0, dragOffsetY = 0;
+    function startDrag(e, winId) {
+      dragWindow = document.getElementById(winId);
+      dragOffsetX = e.clientX - dragWindow.offsetLeft;
+      dragOffsetY = e.clientY - dragWindow.offsetTop;
+      document.addEventListener('mousemove', doDrag);
+      document.addEventListener('mouseup', stopDrag);
+    }
+    function doDrag(e) {
+      if (!dragWindow) return;
+      dragWindow.style.left = (e.clientX - dragOffsetX) + 'px';
+      dragWindow.style.top = (e.clientY - dragOffsetY) + 'px';
+    }
+    function stopDrag() {
+      dragWindow = null;
+      document.removeEventListener('mousemove', doDrag);
+      document.removeEventListener('mouseup', stopDrag);
+    }
+  </script>
+</body>
+</html>

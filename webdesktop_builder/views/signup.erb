@@ -1,0 +1,36 @@
+<% @title = "Sign Up - WebDesktop Builder" %>
+<% @body_class = "auth-page" %>
+
+<div class="auth-container">
+  <div class="auth-box">
+    <h1>WebDesktop Builder</h1>
+    <h2>Create Account</h2>
+
+    <% if @error %>
+      <div class="error-message"><%= h @error %></div>
+    <% end %>
+
+    <form action="/signup" method="POST" class="auth-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label for="password_confirm">Confirm Password</label>
+        <input type="password" id="password_confirm" name="password_confirm" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+    </form>
+
+    <p class="auth-link">Already have an account? <a href="/login">Sign In</a></p>
+    <p class="auth-link"><a href="/">← Back to Home</a></p>
+  </div>
+</div>
