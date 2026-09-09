@@ -1,0 +1,57 @@
+<% @title = "Dashboard - WebDesktop Builder" %>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>WebDesktop</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item active">My Desktops</a>
+      <a href="/desktop/new" class="nav-item">New Desktop</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="user-name"><%= h current_user['username'] %></span>
+      <a href="/logout" class="logout-link">Logout</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="page-header">
+      <h1>My Desktops</h1>
+      <a href="/desktop/new" class="btn btn-primary">+ New Desktop</a>
+    </header>
+
+    <% if @desktops.empty? %>
+      <div class="empty-state">
+        <div class="empty-icon">🖥️</div>
+        <h3>No desktops yet</h3>
+        <p>Create your first web desktop to get started</p>
+        <a href="/desktop/new" class="btn btn-primary">Create Desktop</a>
+      </div>
+    <% else %>
+      <div class="desktop-grid">
+        <% @desktops.each do |desktop| %>
+          <div class="desktop-card">
+            <div class="desktop-preview-mini" style="background-color: <%= h desktop['background_color'] %>">
+              <div class="mini-icons">
+                <span class="mini-icon">📁</span>
+                <span class="mini-icon">📝</span>
+                <span class="mini-icon">🖼️</span>
+              </div>
+            </div>
+            <div class="desktop-info">
+              <h3><%= h desktop['name'] %></h3>
+              <p class="desktop-slug">/<%= h desktop['slug'] %></p>
+              <p class="desktop-date">Updated: <%= desktop['updated_at'] %></p>
+            </div>
+            <div class="desktop-actions">
+              <a href="/desktop/<%= desktop['id'] %>/edit" class="btn btn-sm">Edit</a>
+              <a href="/desktop/<%= desktop['slug'] %>" target="_blank" class="btn btn-sm btn-secondary">Preview</a>
+              <a href="/desktop/<%= desktop['id'] %>/export" class="btn btn-sm btn-secondary">Export</a>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </main>
+</div>

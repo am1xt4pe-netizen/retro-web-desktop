@@ -1,0 +1,520 @@
+<% @title = "Edit #{@desktop['name']} - WebDesktop Builder" %>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>WebDesktop</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item">My Desktops</a>
+      <a href="/desktop/<%= @desktop['id'] %>/edit" class="nav-item active">Editor</a>
+      <a href="/desktop/<%= @desktop['slug'] %>" target="_blank" class="nav-item">Preview</a>
+      <a href="/desktop/<%= @desktop['id'] %>/export" class="nav-item">Export HTML</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="user-name"><%= h current_user['username'] %></span>
+      <a href="/logout" class="logout-link">Logout</a>
+    </div>
+  </aside>
+
+  <main class="main-content editor-main">
+    <!-- Editor Toolbar -->
+    <div class="editor-toolbar">
+      <div class="toolbar-section">
+        <span class="desktop-name"><%= h @desktop['name'] %></span>
+      </div>
+      <div class="toolbar-section">
+        <button class="btn btn-sm" onclick="saveDesktop()">💾 Save</button>
+        <a href="/desktop/<%= @desktop['slug'] %>" target="_blank" class="btn btn-sm btn-secondary">👁 Preview</a>
+        <a href="/desktop/<%= @desktop['id'] %>/export" class="btn btn-sm btn-secondary">📤 Export</a>
+      </div>
+    </div>
+
+    <!-- Editor Workspace -->
+    <div class="editor-workspace">
+      <!-- Left Panel: Tools -->
+      <div class="editor-panel panel-left">
+        <div class="panel-tabs">
+          <button class="tab-btn active" data-tab="appearance">🎨 Appearance</button>
+          <button class="tab-btn" data-tab="icons">🎯 Icons</button>
+          <button class="tab-btn" data-tab="items">📁 Items</button>
+          <button class="tab-btn" data-tab="gallery">🖼️ Gallery</button>
+          <button class="tab-btn" data-tab="documents">📝 Documents</button>
+          <button class="tab-btn" data-tab="games">🎮 Games</button>
+        </div>
+
+        <!-- Appearance Tab -->
+        <div class="tab-content active" id="tab-appearance">
+          <h3>Background</h3>
+          <div class="form-group">
+            <label>Background Color</label>
+            <input type="color" id="bg-color" value="<%= @desktop['background_color'] %>" onchange="updateDesktop()">
+          </div>
+          <div class="form-group">
+            <label>Background Image URL</label>
+            <input type="text" id="bg-image" value="<%= h(@desktop['background_image'] || '') %>" placeholder="https://..." onchange="updateDesktop()">
+          </div>
+          <div class="form-group">
+            <label>Background Style</label>
+            <select id="bg-style" onchange="updateDesktop()">
+              <option value="stretch" <%= @desktop['wallpaper_style'] == 'stretch' ? 'selected' : '' %>>Stretch</option>
+              <option value="tile" <%= @desktop['wallpaper_style'] == 'tile' ? 'selected' : '' %>>Tile</option>
+              <option value="center" <%= @desktop['wallpaper_style'] == 'center' ? 'selected' : '' %>>Center</option>
+              <option value="fit" <%= @desktop['wallpaper_style'] == 'fit' ? 'selected' : '' %>>Fit</option>
+            </select>
+          </div>
+
+          <h3>Typography</h3>
+          <div class="form-group">
+            <label>Font Family</label>
+            <select id="font-family" onchange="updateDesktop()">
+              <option value="Tahoma, sans-serif" <%= @desktop['font_family'] == 'Tahoma, sans-serif' ? 'selected' : '' %>>Tahoma (Classic)</option>
+              <option value="Arial, sans-serif" <%= @desktop['font_family'] == 'Arial, sans-serif' ? 'selected' : '' %>>Arial</option>
+              <option value="'Times New Roman', serif" <%= @desktop['font_family'] == "'Times New Roman', serif" ? 'selected' : '' %>>Times New Roman</option>
+              <option value="'Courier New', monospace" <%= @desktop['font_family'] == "'Courier New', monospace" ? 'selected' : '' %>>Courier New</option>
+              <option value="Verdana, sans-serif" <%= @desktop['font_family'] == 'Verdana, sans-serif' ? 'selected' : '' %>>Verdana</option>
+              <option value="Georgia, serif" <%= @desktop['font_family'] == 'Georgia, serif' ? 'selected' : '' %>>Georgia</option>
+              <option value="'Comic Sans MS', cursive" <%= @desktop['font_family'] == "'Comic Sans MS', cursive" ? 'selected' : '' %>>Comic Sans MS</option>
+            </select>
+          </div>
+
+          <h3>Icons</h3>
+          <div class="form-group">
+            <label>Icon Size</label>
+            <input type="range" id="icon-size" min="32" max="96" value="<%= @desktop['icon_size'] %>" oninput="updateDesktop()">
+            <span id="icon-size-val"><%= @desktop['icon_size'] %>px</span>
+          </div>
+
+          <h3>Taskbar</h3>
+          <div class="form-group">
+            <label>Position</label>
+            <select id="taskbar-pos" onchange="updateDesktop()">
+              <option value="bottom" <%= @desktop['taskbar_position'] == 'bottom' ? 'selected' : '' %>>Bottom</option>
+              <option value="top" <%= @desktop['taskbar_position'] == 'top' ? 'selected' : '' %>>Top</option>
+              <option value="left" <%= @desktop['taskbar_position'] == 'left' ? 'selected' : '' %>>Left</option>
+              <option value="right" <%= @desktop['taskbar_position'] == 'right' ? 'selected' : '' %>>Right</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Taskbar Color</label>
+            <input type="color" id="taskbar-color" value="<%= @desktop['taskbar_color'] %>" onchange="updateDesktop()">
+          </div>
+
+          <h3>Window Theme</h3>
+          <div class="form-group">
+            <select id="window-theme" onchange="updateDesktop()">
+              <option value="classic" <%= @desktop['window_theme'] == 'classic' ? 'selected' : '' %>>Classic 95</option>
+              <option value="modern" <%= @desktop['window_theme'] == 'modern' ? 'selected' : '' %>>Modern Flat</option>
+              <option value="aqua" <%= @desktop['window_theme'] == 'aqua' ? 'selected' : '' %>>Aqua</option>
+              <option value="dark" <%= @desktop['window_theme'] == 'dark' ? 'selected' : '' %>>Dark Mode</option>
+            </select>
+          </div>
+
+          <h3>PWA Settings</h3>
+          <div class="form-group">
+            <label>App Name</label>
+            <input type="text" id="manifest-name" value="<%= h(@desktop['manifest_name'] || @desktop['name']) %>" onchange="updateDesktop()">
+          </div>
+          <div class="form-group">
+            <label>Short Name</label>
+            <input type="text" id="manifest-short" value="<%= h(@desktop['manifest_short_name'] || @desktop['name'][0..11]) %>" onchange="updateDesktop()">
+          </div>
+          <div class="form-group">
+            <label>Theme Color</label>
+            <input type="color" id="manifest-theme" value="<%= @desktop['manifest_theme_color'] || '#008080' %>" onchange="updateDesktop()">
+          </div>
+        </div>
+
+        <!-- Icons Tab -->
+        <div class="tab-content" id="tab-icons">
+          <h3>Choose Icon</h3>
+          <div class="icon-grid">
+            <% @icons.each do |icon| %>
+              <div class="icon-option" data-icon="<%= h icon['name'] %>" onclick="selectIcon('<%= js_str icon['name'] %>')" title="<%= h icon['preview'] %>">
+                <%= icon['svg_data'] %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Items Tab -->
+        <div class="tab-content" id="tab-items">
+          <h3>Add Desktop Item</h3>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="new-item-type">
+              <option value="folder">Folder</option>
+              <option value="file">File</option>
+              <option value="link">Link</option>
+              <option value="text">Text Document</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="new-item-name" placeholder="Item name">
+          </div>
+          <div class="form-group" id="url-group" style="display:none;">
+            <label>URL</label>
+            <input type="text" id="new-item-url" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Icon</label>
+            <select id="new-item-icon">
+              <% @icons.each do |icon| %>
+                <option value="<%= h icon['name'] %>"><%= h icon['preview'] %></option>
+              <% end %>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="addItem()">Add Item</button>
+
+          <h3>Current Items</h3>
+          <div class="item-list" id="item-list">
+            <% @items.each do |item| %>
+              <div class="item-row" data-id="<%= item['id'] %>">
+                <span class="item-name"><%= h item['name'] %></span>
+                <button class="btn-icon" onclick="deleteItem(<%= item['id'] %>)">🗑️</button>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Gallery Tab -->
+        <div class="tab-content" id="tab-gallery">
+          <h3>Upload Image</h3>
+          <form id="gallery-form" enctype="multipart/form-data">
+            <div class="form-group">
+              <label>Image</label>
+              <input type="file" id="gallery-image" name="image" accept="image/*">
+            </div>
+            <div class="form-group">
+              <label>Caption (optional)</label>
+              <input type="text" id="gallery-caption" name="caption" placeholder="Image caption">
+            </div>
+            <button type="button" class="btn btn-primary btn-block" onclick="uploadGalleryImage()">Upload</button>
+          </form>
+
+          <h3>Gallery Images</h3>
+          <div class="gallery-thumbs" id="gallery-thumbs">
+            <% @gallery_images.each do |img| %>
+              <div class="gallery-thumb" data-id="<%= img['id'] %>">
+                <img src="/api/desktop/<%= @desktop['id'] %>/gallery/<%= img['id'] %>" alt="<%= h img['caption'] %>">
+                <button class="btn-icon delete" onclick="deleteGalleryImage(<%= img['id'] %>)">×</button>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Documents Tab -->
+        <div class="tab-content" id="tab-documents">
+          <h3>New Document</h3>
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="doc-title" placeholder="Document title">
+          </div>
+          <button class="btn btn-primary btn-block" onclick="createDocument()">Create Document</button>
+
+          <h3>Documents</h3>
+          <div class="doc-list" id="doc-list">
+            <% @documents.each do |doc| %>
+              <div class="doc-row" data-id="<%= doc['id'] %>">
+                <span class="doc-title"><%= h doc['title'] %></span>
+                <div class="doc-actions">
+                  <button class="btn-icon" onclick="editDocument(<%= doc['id'] %>)">✏️</button>
+                  <a href="/desktop/<%= @desktop['id'] %>/export-pdf/<%= doc['id'] %>" target="_blank" class="btn-icon" title="Export PDF">📄</a>
+                  <button class="btn-icon" onclick="deleteDocument(<%= doc['id'] %>)">🗑️</button>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Games Tab -->
+        <div class="tab-content" id="tab-games">
+          <h3>Add Retro Game</h3>
+          <p class="help-text">Add games from the Internet Archive. Search for games and copy the identifier.</p>
+          <div class="form-group">
+            <label>Game Title</label>
+            <input type="text" id="game-title" placeholder="e.g., Prince of Persia">
+          </div>
+          <div class="form-group">
+            <label>Internet Archive ID</label>
+            <input type="text" id="game-id" placeholder="e.g., msdos_Prince_of_Persia_1990">
+          </div>
+          <div class="form-group">
+            <label>Platform</label>
+            <select id="game-platform">
+              <option value="msdos">MS-DOS</option>
+              <option value="arcade">Arcade</option>
+              <option value="console">Console</option>
+              <option value="atari">Atari 2600</option>
+              <option value="c64">Commodore 64</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="addGame()">Add Game</button>
+
+          <h3>Added Games</h3>
+          <div class="game-list" id="game-list">
+            <% @retro_games.each do |game| %>
+              <div class="game-row" data-id="<%= game['id'] %>">
+                <span class="game-title"><%= h game['game_title'] %> (<%= h game['platform'] %>)</span>
+                <button class="btn-icon" onclick="deleteGame(<%= game['id'] %>)">🗑️</button>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="game-help">
+            <h4>How to find games:</h4>
+            <ol>
+              <li>Go to <a href="https://archive.org/details/internetarcade" target="_blank">Internet Archive</a></li>
+              <li>Find a game and open its page</li>
+              <li>Copy the identifier from the URL</li>
+              <li>Paste it above</li>
+            </ol>
+            <p>Popular examples:</p>
+            <ul>
+              <li>msdos_Prince_of_Persia_1990</li>
+              <li>msdos_Oregon_Trail</li>
+              <li>arcade_donkeykong</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Preview -->
+      <div class="editor-preview">
+        <div class="preview-frame" id="desktop-preview">
+          <iframe src="/desktop/<%= @desktop['slug'] %>" id="preview-iframe" frameborder="0"></iframe>
+        </div>
+      </div>
+
+      <!-- Right Panel: Properties -->
+      <div class="editor-panel panel-right">
+        <h3>Selected Item</h3>
+        <div id="selected-item-info">
+          <p class="empty-state">Click an item on the desktop to edit it</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Text Editor Modal -->
+<div class="modal" id="text-editor-modal">
+  <div class="modal-content editor-modal">
+    <div class="modal-header">
+      <h3 id="editor-doc-title">Document Editor</h3>
+      <button class="btn-icon" onclick="closeTextEditor()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editor-doc-id">
+      <div class="editor-toolbar-btns">
+        <button onclick="formatText('bold')"><b>B</b></button>
+        <button onclick="formatText('italic')"><i>I</i></button>
+        <button onclick="formatText('underline')"><u>U</u></button>
+        <button onclick="formatText('strikeThrough')"><s>S</s></button>
+        <span class="sep">|</span>
+        <button onclick="formatText('justifyLeft')">⬅</button>
+        <button onclick="formatText('justifyCenter')">↔</button>
+        <button onclick="formatText('justifyRight')">➡</button>
+        <span class="sep">|</span>
+        <button onclick="formatText('insertUnorderedList')">• List</button>
+        <button onclick="formatText('insertOrderedList')">1. List</button>
+      </div>
+      <div id="text-editor" contenteditable="true"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveDocument()">💾 Save</button>
+      <a id="export-pdf-link" href="#" target="_blank" class="btn btn-secondary">📄 Export PDF</a>
+      <button class="btn btn-secondary" onclick="closeTextEditor()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const desktopId = <%= @desktop['id'] %>;
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Item type change
+  document.getElementById('new-item-type').addEventListener('change', function() {
+    document.getElementById('url-group').style.display = this.value === 'link' ? 'block' : 'none';
+  });
+
+  let selectedIcon = 'folder';
+  function selectIcon(name) {
+    selectedIcon = name;
+    document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
+    const opt = document.querySelector(`.icon-option[data-icon="${CSS.escape(name)}"]`);
+    if (opt) opt.classList.add('selected');
+    const iconSelect = document.getElementById('new-item-icon');
+    if (iconSelect) iconSelect.value = name;
+  }
+
+  function updateDesktop() {
+    const data = {
+      background_color: document.getElementById('bg-color').value,
+      background_image: document.getElementById('bg-image').value,
+      wallpaper_style: document.getElementById('bg-style').value,
+      font_family: document.getElementById('font-family').value,
+      icon_size: document.getElementById('icon-size').value,
+      taskbar_position: document.getElementById('taskbar-pos').value,
+      taskbar_color: document.getElementById('taskbar-color').value,
+      window_theme: document.getElementById('window-theme').value,
+      manifest_name: document.getElementById('manifest-name').value,
+      manifest_short_name: document.getElementById('manifest-short').value,
+      manifest_theme_color: document.getElementById('manifest-theme').value
+    };
+
+    fetch(`/api/desktop/${desktopId}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(data)
+    }).then(() => {
+      document.getElementById('preview-iframe').contentWindow.location.reload();
+    });
+
+    document.getElementById('icon-size-val').textContent = data.icon_size + 'px';
+  }
+
+  function addItem() {
+    const name = document.getElementById('new-item-name').value.trim();
+    if (!name) { alert('Please enter a name'); return; }
+
+    const data = {
+      item_type: document.getElementById('new-item-type').value,
+      name: name,
+      icon: document.getElementById('new-item-icon').value,
+      url: document.getElementById('new-item-url').value
+    };
+
+    fetch(`/api/desktop/${desktopId}/item`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(data)
+    }).then(() => {
+      document.getElementById('new-item-name').value = '';
+      document.getElementById('new-item-url').value = '';
+      location.reload();
+    });
+  }
+
+  function deleteItem(id) {
+    if (!confirm('Delete this item?')) return;
+    fetch(`/api/desktop/${desktopId}/item/${id}`, { method: 'DELETE' })
+      .then(() => location.reload());
+  }
+
+  function uploadGalleryImage() {
+    const fileInput = document.getElementById('gallery-image');
+    if (!fileInput.files[0]) { alert('Please choose an image'); return; }
+    const form = document.getElementById('gallery-form');
+    const formData = new FormData(form);
+
+    fetch(`/api/desktop/${desktopId}/gallery`, {
+      method: 'POST',
+      body: formData
+    }).then(r => {
+      if (!r.ok) return r.json().then(d => { throw new Error(d.error || 'Upload failed'); });
+      location.reload();
+    }).catch(err => alert(err.message));
+  }
+
+  function deleteGalleryImage(id) {
+    if (!confirm('Delete this image?')) return;
+    fetch(`/api/desktop/${desktopId}/gallery/${id}`, { method: 'DELETE' })
+      .then(() => location.reload());
+  }
+
+  function createDocument() {
+    const title = document.getElementById('doc-title').value;
+    fetch(`/api/desktop/${desktopId}/document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ title: title, content: '' })
+    }).then(() => location.reload());
+  }
+
+  function editDocument(id) {
+    fetch(`/api/desktop/${desktopId}/document/${id}`)
+      .then(r => r.json())
+      .then(doc => {
+        document.getElementById('editor-doc-id').value = id;
+        document.getElementById('editor-doc-title').textContent = doc.title;
+        document.getElementById('text-editor').innerHTML = doc.content || '';
+        document.getElementById('export-pdf-link').href = `/desktop/${desktopId}/export-pdf/${id}`;
+        document.getElementById('text-editor-modal').style.display = 'flex';
+      });
+  }
+
+  function saveDocument() {
+    const id = document.getElementById('editor-doc-id').value;
+    const title = document.getElementById('editor-doc-title').textContent;
+    const content = document.getElementById('text-editor').innerHTML;
+
+    fetch(`/api/desktop/${desktopId}/document/${id}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ title: title, content: content })
+    }).then(() => {
+      closeTextEditor();
+      location.reload();
+    });
+  }
+
+  function closeTextEditor() {
+    document.getElementById('text-editor-modal').style.display = 'none';
+  }
+
+  function deleteDocument(id) {
+    if (!confirm('Delete this document?')) return;
+    fetch(`/api/desktop/${desktopId}/document/${id}`, { method: 'DELETE' })
+      .then(() => location.reload());
+  }
+
+  function formatText(cmd) {
+    document.execCommand(cmd, false, null);
+    document.getElementById('text-editor').focus();
+  }
+
+  function addGame() {
+    const gameId = document.getElementById('game-id').value.trim();
+    const gameTitle = document.getElementById('game-title').value.trim();
+    if (!gameId || !gameTitle) { alert('Please fill in the game title and Internet Archive ID'); return; }
+
+    const platform = document.getElementById('game-platform').value;
+    const embedUrl = `https://archive.org/embed/${encodeURIComponent(gameId)}`;
+    const thumbUrl = `https://archive.org/services/img/${encodeURIComponent(gameId)}`;
+
+    const data = {
+      game_id: gameId,
+      game_title: gameTitle,
+      platform: platform,
+      embed_url: embedUrl,
+      thumbnail_url: thumbUrl
+    };
+
+    fetch(`/api/desktop/${desktopId}/game`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(data)
+    }).then(() => location.reload());
+  }
+
+  function deleteGame(id) {
+    if (!confirm('Remove this game?')) return;
+    fetch(`/api/desktop/${desktopId}/game/${id}`, { method: 'DELETE' })
+      .then(() => location.reload());
+  }
+
+  function saveDesktop() {
+    updateDesktop();
+  }
+</script>
