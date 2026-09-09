@@ -1,0 +1,11 @@
+/webdesktop.db
+/webdesktop.db-journal
+/webdesktop.db-wal
+/webdesktop.db-shm
+/.bundle/
+/vendor/bundle/
+/log/
+*.log
+.DS_Store
+.env
+.session_secret

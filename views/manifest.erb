@@ -1,0 +1,21 @@
+{
+  "name": <%= (@desktop['manifest_name'] || @desktop['name']).to_s.to_json %>,
+  "short_name": <%= (@desktop['manifest_short_name'] || @desktop['name'][0..11]).to_s.to_json %>,
+  "start_url": "/desktop/<%= @desktop['slug'] %>",
+  "display": "standalone",
+  "background_color": "<%= @desktop['manifest_background_color'] || '#008080' %>",
+  "theme_color": "<%= @desktop['manifest_theme_color'] || '#008080' %>",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "scope": "/desktop/<%= @desktop['slug'] %>"
+}

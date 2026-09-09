@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= @title || "WebDesktop Builder" %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <script src="/js/app.js" defer></script>
+</head>
+<body class="<%= @body_class || '' %>" data-theme="theme-1">
+  <div class="theme-switcher" aria-label="App theme">
+    <span class="theme-switcher-label">Theme <strong id="theme-number">01</strong></span>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch app theme">Switch</button>
+  </div>
+  <%= yield %>
+  <script>
+    (() => {
+      const themes = Array.from({ length: 10 }, (_, index) => `theme-${index + 1}`);
+      const body = document.body;
+      const toggle = document.getElementById('theme-toggle');
+      const number = document.getElementById('theme-number');
+      const stored = window.localStorage.getItem('webdesktop-theme');
+      const applyTheme = (theme) => {
+        body.dataset.theme = theme;
+        number.textContent = String(themes.indexOf(theme) + 1).padStart(2, '0');
+        window.localStorage.setItem('webdesktop-theme', theme);
+      };
+      applyTheme(themes.includes(stored) ? stored : 'theme-1');
+      toggle.addEventListener('click', () => {
+        const next = (themes.indexOf(body.dataset.theme) + 1) % themes.length;
+        applyTheme(themes[next]);
+      });
+    })();
+  </script>
+</body>
+</html>
