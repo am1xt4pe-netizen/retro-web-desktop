@@ -40,6 +40,7 @@
           <button class="tab-btn" data-tab="items">📁 Items</button>
           <button class="tab-btn" data-tab="gallery">🖼️ Gallery</button>
           <button class="tab-btn" data-tab="documents">📝 Documents</button>
+          <button class="tab-btn" data-tab="tools">🧰 Tools</button>
           <button class="tab-btn" data-tab="games">🎮 Games</button>
         </div>
 
@@ -146,7 +147,6 @@
               <option value="folder">Folder</option>
               <option value="link">Link</option>
               <option value="text">Text Document</option>
-              <option value="write">Write-v5 Word Processor</option>
             </select>
           </div>
           <div class="form-group">
@@ -232,6 +232,19 @@
           <div class="form-group">
             <label>Title</label>
             <input type="text" id="doc-title" placeholder="Document title">
+          </div>
+
+          <!-- Tools Tab -->
+          <div class="tab-content" id="tab-tools">
+            <h3>Write-v5</h3>
+            <p class="help-text">Create a writing tool on your desktop. It opens in its own window and saves your work there.</p>
+            <div class="form-group">
+              <label>Document title</label>
+              <input type="text" id="tool-doc-title" placeholder="My new document">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="createToolDocument()">Add Write-v5 to Desktop</button>
+            <h3>Writing tools</h3>
+            <p class="help-text">More creative tools will appear here as they are added.</p>
           </div>
           <button class="btn btn-primary btn-block" onclick="createDocument()">Create Document</button>
 
@@ -496,6 +509,21 @@
     }).then(() => location.reload());
   }
 
+  function createToolDocument() {
+    const title = document.getElementById('tool-doc-title').value.trim() || 'Untitled';
+    fetch(`/api/desktop/${desktopId}/document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ title: title, content: '' })
+    }).then(async response => {
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Could not create Write-v5');
+      }
+      location.reload();
+    }).catch(error => alert(error.message));
+  }
+
   function editDocument(id) {
     fetch(`/api/desktop/${desktopId}/document/${id}`)
       .then(r => r.json())
@@ -561,7 +589,13 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(data)
-    }).then(() => location.reload());
+    }).then(async response => {
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Could not add game');
+      }
+      location.reload();
+    }).catch(error => alert(error.message));
   }
 
   function chooseGame(id, title, platform) {

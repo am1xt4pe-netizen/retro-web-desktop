@@ -504,8 +504,10 @@
           content = renderGallery(id);
           break;
         case 'text':
-        case 'write':
           content = renderText(id);
+          break;
+        case 'write':
+          content = renderWrite(id);
           break;
         case 'image':
           content = renderImage(id);
@@ -596,7 +598,7 @@
     function renderText(id) {
       const docs = <%= safe_json @documents %>;
       const item = <%= safe_json @items %>.find(i => i.id == id);
-      const doc = docs.find(d => d.id == id || (item && d.id == item.content));
+      const doc = docs.find(d => d.id == id || (item && d.id == Number(item.content)));
       if (doc) {
         // Rich-text document content is intentionally rendered as HTML --
         // it comes from the desktop owner's own WYSIWYG editor.
@@ -608,7 +610,7 @@
     function renderWrite(id) {
       const docs = <%= safe_json @documents %>;
       const item = <%= safe_json @items %>.find(i => i.id == id);
-      const doc = docs.find(d => item && d.id == item.content);
+      const doc = docs.find(d => item && d.id == Number(item.content));
       if (!doc) return '<div class="document-view"><p>Document not found</p></div>';
       const content = doc.content || '';
       return `<div class="write-v5-window">
@@ -658,7 +660,8 @@
 
     function renderGame(id) {
       const games = <%= safe_json @retro_games %>;
-      const game = games.find(g => g.id == id);
+      const item = <%= safe_json @items %>.find(i => i.id == id);
+      const game = games.find(g => item && g.id == Number(item.content));
       if (game) {
         return `
           <div style="width:100%;height:100%;">

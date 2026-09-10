@@ -309,6 +309,16 @@ helpers do
     db.execute(query, values).empty?
   end
 
+  def next_item_position(desktop_id, parent_item_id = nil)
+    index = 0
+    loop do
+      x = 20 + ((index / 8) * 100)
+      y = 20 + ((index % 8) * 80)
+      return [x, y] if item_position_available?(desktop_id, x, y, parent_item_id)
+      index += 1
+    end
+  end
+
   # Escapes plain-text fields (names, titles, captions) that get interpolated
   # into HTML/attributes. NOT used on rich-text document content, which is
   # expected to contain formatting HTML from the WYSIWYG editor by design.
@@ -546,11 +556,7 @@ post '/api/desktop/:id/item' do
     ).first
     halt 400, { success: false, error: 'Choose a valid folder.' }.to_json unless parent
   end
-  x_position = (params[:x_position] || 20).to_i
-  y_position = (params[:y_position] || 20).to_i
-  unless item_position_available?(desktop['id'], x_position, y_position, parent_item_id)
-    halt 409, { success: false, error: 'That position is already occupied. Choose another spot.' }.to_json
-  end
+  x_position, y_position = next_item_position(desktop['id'], parent_item_id)
 
   db.execute(
     "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, content, url, parent_item_id, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -567,9 +573,10 @@ post '/api/desktop/:id/item' do
       next_sort_order('desktop_items', desktop['id'])
     ]
   )
+  item_id = db.last_insert_row_id
 
   content_type :json
-  { success: true, id: db.last_insert_row_id }.to_json
+  { success: true, id: item_id }.to_json
 end
 
 post '/api/desktop/:id/item/:item_id/update' do
@@ -712,9 +719,11 @@ post '/api/desktop/:id/document' do
     [desktop['id'], title, params[:content] || '']
   )
   document_id = db.last_insert_row_id
+  x_position, y_position = next_item_position(desktop['id'])
+  item_order = next_sort_order('desktop_items', desktop['id'])
   db.execute(
     "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, content, sort_order) VALUES (?, 'write', ?, 'note', ?, ?, ?, ?)",
-    [desktop['id'], title, 20, 20 + (next_sort_order('desktop_items', desktop['id']) * 80), document_id.to_s, next_sort_order('desktop_items', desktop['id'])]
+    [desktop['id'], title, x_position, y_position, document_id.to_s, item_order]
   )
 
   content_type :json
@@ -773,21 +782,30 @@ post '/api/desktop/:id/game' do
   require_login
   desktop = require_desktop_owner(params[:id].to_i)
 
+  game_id = params[:game_id].to_s.strip
+  game_title = params[:game_title].to_s.strip
+  halt 400, { success: false, error: 'Game title and Internet Archive ID are required.' }.to_json if game_id.empty? || game_title.empty?
   db.execute(
     "INSERT INTO retro_games (desktop_id, game_id, game_title, platform, embed_url, thumbnail_url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [
       desktop['id'],
-      params[:game_id],
-      params[:game_title],
+      game_id,
+      game_title,
       params[:platform],
       params[:embed_url],
       params[:thumbnail_url],
       next_sort_order('retro_games', desktop['id'])
     ]
   )
+  game_record_id = db.last_insert_row_id
+  x_position, y_position = next_item_position(desktop['id'])
+  db.execute(
+    "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, content, sort_order) VALUES (?, 'game', ?, 'game', ?, ?, ?, ?)",
+    [desktop['id'], game_title, x_position, y_position, game_record_id.to_s, next_sort_order('desktop_items', desktop['id'])]
+  )
 
   content_type :json
-  { success: true, id: db.last_insert_row_id }.to_json
+  { success: true, id: game_record_id }.to_json
 end
 
 delete '/api/desktop/:id/game/:game_id' do
