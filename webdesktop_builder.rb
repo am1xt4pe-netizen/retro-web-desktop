@@ -94,6 +94,7 @@ def init_database
       y_position INTEGER DEFAULT 0,
       content TEXT,
       url TEXT,
+      parent_item_id INTEGER,
       file_path TEXT,
       file_size INTEGER,
       mime_type TEXT,
@@ -161,6 +162,8 @@ def init_database
   # existing databases migrate safely without copying binary image data.
   gallery_columns = db.execute('PRAGMA table_info(gallery_images)').map { |column| column['name'] }
   db.execute('ALTER TABLE gallery_images ADD COLUMN source_url TEXT') unless gallery_columns.include?('source_url')
+  item_columns = db.execute('PRAGMA table_info(desktop_items)').map { |column| column['name'] }
+  db.execute('ALTER TABLE desktop_items ADD COLUMN parent_item_id INTEGER') unless item_columns.include?('parent_item_id')
 
   seed_default_data
 end
@@ -288,6 +291,22 @@ helpers do
       [desktop_id]
     ).first
     row['max_order'].to_i + 1
+  end
+
+  def item_position_available?(desktop_id, x, y, parent_item_id, exclude_id = nil)
+    query = "SELECT id FROM desktop_items WHERE desktop_id = ? AND x_position = ? AND y_position = ?"
+    values = [desktop_id, x.to_i, y.to_i]
+    if parent_item_id
+      query << " AND parent_item_id = ?"
+      values << parent_item_id
+    else
+      query << " AND parent_item_id IS NULL"
+    end
+    if exclude_id
+      query << " AND id != ?"
+      values << exclude_id
+    end
+    db.execute(query, values).empty?
   end
 
   # Escapes plain-text fields (names, titles, captions) that get interpolated
@@ -425,7 +444,7 @@ post '/desktop/new' do
 
   default_items = [
     ['folder', 'My Documents', 'folder', 20, 20],
-    ['file', 'Readme.txt', 'text', 20, 100],
+    ['write', 'Write', 'note', 20, 100],
     ['link', 'My Links', 'link', 20, 180],
     ['gallery', 'My Photos', 'gallery', 20, 260],
     ['game', 'Retro Games', 'retro_game', 20, 340]
@@ -437,6 +456,15 @@ post '/desktop/new' do
       [desktop_id, item[0], item[1], item[2], item[3], item[4], i]
     )
   end
+  db.execute(
+    "INSERT INTO text_documents (desktop_id, title, content) VALUES (?, ?, ?)",
+    [desktop_id, 'Welcome to Write', '<p>Start typing your first document.</p>']
+  )
+  write_document_id = db.last_insert_row_id
+  db.execute(
+    "UPDATE desktop_items SET content = ? WHERE desktop_id = ? AND item_type = 'write'",
+    [write_document_id.to_s, desktop_id]
+  )
 
   redirect "/desktop/#{desktop_id}/edit"
 end
@@ -508,18 +536,34 @@ post '/api/desktop/:id/item' do
 
   name = params[:name].to_s.strip
   halt 400, { success: false, error: 'Name is required' }.to_json if name.empty?
+  item_type = params[:item_type].to_s
+  halt 400, { success: false, error: 'Unsupported item type' }.to_json unless %w[folder link text write].include?(item_type)
+  parent_item_id = params[:parent_item_id].to_s.empty? ? nil : params[:parent_item_id].to_i
+  if parent_item_id
+    parent = db.execute(
+      "SELECT id FROM desktop_items WHERE id = ? AND desktop_id = ? AND item_type = 'folder'",
+      [parent_item_id, desktop['id']]
+    ).first
+    halt 400, { success: false, error: 'Choose a valid folder.' }.to_json unless parent
+  end
+  x_position = (params[:x_position] || 20).to_i
+  y_position = (params[:y_position] || 20).to_i
+  unless item_position_available?(desktop['id'], x_position, y_position, parent_item_id)
+    halt 409, { success: false, error: 'That position is already occupied. Choose another spot.' }.to_json
+  end
 
   db.execute(
-    "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, content, url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, content, url, parent_item_id, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [
       desktop['id'],
-      params[:item_type],
+      item_type,
       name,
       params[:icon] || 'folder',
-      params[:x_position] || 20,
-      params[:y_position] || 20,
+      x_position,
+      y_position,
       params[:content],
       params[:url],
+      parent_item_id,
       next_sort_order('desktop_items', desktop['id'])
     ]
   )
@@ -544,6 +588,26 @@ post '/api/desktop/:id/item/:item_id/update' do
     if params[field]
       updates << "#{field} = ?"
       values << params[field]
+    end
+  end
+  if params[:parent_item_id]
+    parent_item_id = params[:parent_item_id].to_s.empty? ? nil : params[:parent_item_id].to_i
+    if parent_item_id
+      parent = db.execute(
+        "SELECT id FROM desktop_items WHERE id = ? AND desktop_id = ? AND item_type = 'folder'",
+        [parent_item_id, desktop['id']]
+      ).first
+      halt 400, { success: false, error: 'Choose a valid folder.' }.to_json unless parent
+    end
+    updates << 'parent_item_id = ?'
+    values << parent_item_id
+  end
+  if params[:x_position] || params[:y_position] || params[:parent_item_id]
+    new_x = params[:x_position] ? params[:x_position].to_i : item['x_position']
+    new_y = params[:y_position] ? params[:y_position].to_i : item['y_position']
+    new_parent = params[:parent_item_id] ? (params[:parent_item_id].to_s.empty? ? nil : params[:parent_item_id].to_i) : item['parent_item_id']
+    unless item_position_available?(desktop['id'], new_x, new_y, new_parent, item['id'])
+      halt 409, { success: false, error: 'That position is already occupied. Choose another spot.' }.to_json
     end
   end
 
@@ -641,13 +705,20 @@ post '/api/desktop/:id/document' do
   require_login
   desktop = require_desktop_owner(params[:id].to_i)
 
+  title = params[:title].to_s.strip
+  title = 'Untitled' if title.empty?
   db.execute(
     "INSERT INTO text_documents (desktop_id, title, content) VALUES (?, ?, ?)",
-    [desktop['id'], params[:title].to_s.empty? ? 'Untitled' : params[:title], params[:content] || '']
+    [desktop['id'], title, params[:content] || '']
+  )
+  document_id = db.last_insert_row_id
+  db.execute(
+    "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, content, sort_order) VALUES (?, 'write', ?, 'note', ?, ?, ?, ?)",
+    [desktop['id'], title, 20, 20 + (next_sort_order('desktop_items', desktop['id']) * 80), document_id.to_s, next_sort_order('desktop_items', desktop['id'])]
   )
 
   content_type :json
-  { success: true, id: db.last_insert_row_id }.to_json
+  { success: true, id: document_id }.to_json
 end
 
 post '/api/desktop/:id/document/:doc_id/update' do
@@ -657,6 +728,10 @@ post '/api/desktop/:id/document/:doc_id/update' do
   db.execute(
     "UPDATE text_documents SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND desktop_id = ?",
     [params[:title], params[:content], params[:doc_id], desktop['id']]
+  )
+  db.execute(
+    "UPDATE desktop_items SET name = ? WHERE desktop_id = ? AND item_type = 'write' AND content = ?",
+    [params[:title].to_s.strip.empty? ? 'Untitled' : params[:title].to_s.strip, desktop['id'], params[:doc_id].to_s]
   )
 
   content_type :json

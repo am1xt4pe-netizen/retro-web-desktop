@@ -307,7 +307,7 @@
 </head>
 <body>
   <div class="desktop" id="desktop">
-    <% @items.each do |item| %>
+    <% @items.select { |item| item['parent_item_id'].nil? }.each do |item| %>
       <div class="desktop-icon"
            style="left: <%= item['x_position'] %>px; top: <%= item['y_position'] %>px;"
            data-type="<%= h item['item_type'] %>"
@@ -401,12 +401,72 @@
       icons.forEach((icon) => {
         icon.style.left = x + 'px';
         icon.style.top = y + 'px';
+        saveIconPosition(icon, x, y);
         y += rowHeight;
         if (y > window.innerHeight - 100) {
           y = 20;
           x += colWidth;
         }
       });
+    }
+
+    let draggedIcon = null;
+    let iconOffsetX = 0;
+    let iconOffsetY = 0;
+    let suppressIconClick = false;
+
+    function saveIconPosition(icon, x, y) {
+      fetch(`/api/desktop/${desktopId}/item/${icon.dataset.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ x_position: Math.max(0, Math.round(x)), y_position: Math.max(0, Math.round(y)) })
+      }).then(response => {
+        if (!response.ok) throw new Error('That position is already occupied.');
+      }).catch(error => {
+        alert(error.message);
+        location.reload();
+      });
+    }
+
+    document.querySelectorAll('.desktop-icon').forEach(icon => {
+      icon.addEventListener('mousedown', event => {
+        if (event.button !== 0) return;
+        draggedIcon = icon;
+        const rect = icon.getBoundingClientRect();
+        iconOffsetX = event.clientX - rect.left;
+        iconOffsetY = event.clientY - rect.top;
+        icon.dataset.startLeft = icon.offsetLeft;
+        icon.dataset.startTop = icon.offsetTop;
+        document.addEventListener('mousemove', dragIcon);
+        document.addEventListener('mouseup', dropIcon, { once: true });
+      });
+      icon.addEventListener('click', event => {
+        if (suppressIconClick) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          suppressIconClick = false;
+        }
+      }, true);
+    });
+
+    function dragIcon(event) {
+      if (!draggedIcon) return;
+      const desktopRect = document.getElementById('desktop').getBoundingClientRect();
+      const x = Math.max(0, Math.round((event.clientX - desktopRect.left - iconOffsetX) / 20) * 20);
+      const y = Math.max(0, Math.round((event.clientY - desktopRect.top - iconOffsetY) / 20) * 20);
+      if (x !== Number(draggedIcon.dataset.startLeft) || y !== Number(draggedIcon.dataset.startTop)) {
+        suppressIconClick = true;
+      }
+      draggedIcon.style.left = `${x}px`;
+      draggedIcon.style.top = `${y}px`;
+    }
+
+    function dropIcon() {
+      if (!draggedIcon) return;
+      document.removeEventListener('mousemove', dragIcon);
+      const icon = draggedIcon;
+      draggedIcon = null;
+      saveIconPosition(icon, icon.offsetLeft, icon.offsetTop);
     }
 
     // Window management
@@ -444,6 +504,7 @@
           content = renderGallery(id);
           break;
         case 'text':
+        case 'write':
           content = renderText(id);
           break;
         case 'image':
@@ -506,7 +567,7 @@
     // of this <script> block. Item names/captions are still plain strings
     // here, so we escape them again on the way into innerHTML.
     function renderFolder(id) {
-      const items = <%= safe_json @items.select { |i| i['item_type'] == 'file' || i['item_type'] == 'text' } %>;
+      const items = <%= safe_json @items %>.filter(item => item.parent_item_id == id);
       let html = '<div style="padding: 8px;">';
       items.forEach(item => {
         const safeName = escapeHtml(item.name);
@@ -534,13 +595,53 @@
 
     function renderText(id) {
       const docs = <%= safe_json @documents %>;
-      const doc = docs.find(d => d.id == id);
+      const item = <%= safe_json @items %>.find(i => i.id == id);
+      const doc = docs.find(d => d.id == id || (item && d.id == item.content));
       if (doc) {
         // Rich-text document content is intentionally rendered as HTML --
         // it comes from the desktop owner's own WYSIWYG editor.
         return `<div class="document-view">${doc.content || '<p>Empty document</p>'}</div>`;
       }
       return '<div class="document-view"><p>Document not found</p></div>';
+    }
+
+    function renderWrite(id) {
+      const docs = <%= safe_json @documents %>;
+      const item = <%= safe_json @items %>.find(i => i.id == id);
+      const doc = docs.find(d => item && d.id == item.content);
+      if (!doc) return '<div class="document-view"><p>Document not found</p></div>';
+      const content = doc.content || '';
+      return `<div class="write-v5-window">
+        <div class="write-v5-toolbar">
+          <button onclick="writeFormat('bold')"><b>B</b></button>
+          <button onclick="writeFormat('italic')"><i>I</i></button>
+          <button onclick="writeFormat('underline')"><u>U</u></button>
+          <button onclick="writeFormat('insertUnorderedList')">• List</button>
+          <button onclick="saveWriteDocument(${doc.id}, this)">SAVE</button>
+        </div>
+        <input class="write-v5-title" value="${escapeHtml(doc.title)}" aria-label="Document title">
+        <div class="write-v5-editor" contenteditable="true">${content}</div>
+      </div>`;
+    }
+
+    function writeFormat(command) {
+      document.execCommand(command, false, null);
+    }
+
+    function saveWriteDocument(docId, button) {
+      const root = button.closest('.write-v5-window');
+      fetch(`/api/desktop/${desktopId}/document/${docId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          title: root.querySelector('.write-v5-title').value,
+          content: root.querySelector('.write-v5-editor').innerHTML
+        })
+      }).then(response => {
+        if (!response.ok) throw new Error('Could not save document');
+        button.textContent = 'SAVED';
+        setTimeout(() => { button.textContent = 'SAVE'; }, 1200);
+      }).catch(error => alert(error.message));
     }
 
     function renderImage(id) {

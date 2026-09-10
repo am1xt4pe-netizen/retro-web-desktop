@@ -656,6 +656,72 @@ body {
   object-fit: contain;
 }
 
+.gallery-thumb-legacy {
+  display: grid;
+  place-items: center;
+  min-height: 90px;
+  padding: 12px;
+  color: #777;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.document-title-input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 8px;
+}
+
+.game-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.write-v5-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 300px;
+  background: #020702;
+  color: #39ff6a;
+  font-family: "Share Tech Mono", "Courier New", monospace;
+}
+
+.write-v5-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid #1c8036;
+}
+
+.write-v5-toolbar button {
+  border: 1px solid #1c8036;
+  background: #010601;
+  color: #39ff6a;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.write-v5-title {
+  margin: 12px;
+  padding: 6px;
+  border: 1px solid #1c8036;
+  background: transparent;
+  color: #c8a86b;
+  font: inherit;
+}
+
+.write-v5-editor {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  outline: none;
+  line-height: 1.7;
+}
+
 .gallery-thumb .delete {
   position: absolute;
   top: 4px;

@@ -146,6 +146,7 @@
               <option value="folder">Folder</option>
               <option value="link">Link</option>
               <option value="text">Text Document</option>
+              <option value="write">Write-v5 Word Processor</option>
             </select>
           </div>
           <div class="form-group">
@@ -155,6 +156,15 @@
           <div class="form-group" id="url-group" style="display:none;">
             <label>URL</label>
             <input type="text" id="new-item-url" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Folder</label>
+            <select id="new-item-parent">
+              <option value="">Desktop (top level)</option>
+              <% @items.select { |item| item['item_type'] == 'folder' }.each do |folder| %>
+                <option value="<%= folder['id'] %>"><%= h folder['name'] %></option>
+              <% end %>
+            </select>
           </div>
           <div class="form-group">
             <label>Icon</label>
@@ -243,14 +253,19 @@
         <!-- Games Tab -->
         <div class="tab-content" id="tab-games">
           <h3>Add Retro Game</h3>
-          <p class="help-text">Add games from the Internet Archive. Search for games and copy the identifier.</p>
+          <p class="help-text">Pick a classic below, or paste an Internet Archive item ID. No searching or URL building required.</p>
+          <div class="game-presets">
+            <button type="button" class="btn btn-secondary" onclick="chooseGame('msdos_Prince_of_Persia_1990','Prince of Persia','msdos')">Prince of Persia</button>
+            <button type="button" class="btn btn-secondary" onclick="chooseGame('msdos_Oregon_Trail','The Oregon Trail','msdos')">Oregon Trail</button>
+            <button type="button" class="btn btn-secondary" onclick="chooseGame('arcade_donkeykong','Donkey Kong','arcade')">Donkey Kong</button>
+          </div>
           <div class="form-group">
             <label>Game Title</label>
             <input type="text" id="game-title" placeholder="e.g., Prince of Persia">
           </div>
           <div class="form-group">
             <label>Internet Archive ID</label>
-            <input type="text" id="game-id" placeholder="e.g., msdos_Prince_of_Persia_1990">
+            <input type="text" id="game-id" placeholder="Choose a classic above or paste an ID">
           </div>
           <div class="form-group">
             <label>Platform</label>
@@ -319,6 +334,7 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="editor-doc-id">
+      <input type="text" id="editor-doc-title-input" class="document-title-input" aria-label="Document title">
       <div class="editor-toolbar-btns">
         <button onclick="formatText('bold')"><b>B</b></button>
         <button onclick="formatText('italic')"><i>I</i></button>
@@ -404,18 +420,23 @@
       item_type: document.getElementById('new-item-type').value,
       name: name,
       icon: document.getElementById('new-item-icon').value,
-      url: document.getElementById('new-item-url').value
+      url: document.getElementById('new-item-url').value,
+      parent_item_id: document.getElementById('new-item-parent').value
     };
 
     fetch(`/api/desktop/${desktopId}/item`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(data)
-    }).then(() => {
+    }).then(async response => {
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Could not add item');
+      }
       document.getElementById('new-item-name').value = '';
       document.getElementById('new-item-url').value = '';
       location.reload();
-    });
+    }).catch(error => alert(error.message));
   }
 
   function deleteItem(id) {
@@ -481,6 +502,7 @@
       .then(doc => {
         document.getElementById('editor-doc-id').value = id;
         document.getElementById('editor-doc-title').textContent = doc.title;
+        document.getElementById('editor-doc-title-input').value = doc.title;
         document.getElementById('text-editor').innerHTML = doc.content || '';
         document.getElementById('export-pdf-link').href = `/desktop/${desktopId}/export-pdf/${id}`;
         document.getElementById('text-editor-modal').style.display = 'flex';
@@ -489,7 +511,7 @@
 
   function saveDocument() {
     const id = document.getElementById('editor-doc-id').value;
-    const title = document.getElementById('editor-doc-title').textContent;
+    const title = document.getElementById('editor-doc-title-input').value.trim() || 'Untitled';
     const content = document.getElementById('text-editor').innerHTML;
 
     fetch(`/api/desktop/${desktopId}/document/${id}/update`, {
@@ -520,7 +542,8 @@
   function addGame() {
     const gameId = document.getElementById('game-id').value.trim();
     const gameTitle = document.getElementById('game-title').value.trim();
-    if (!gameId || !gameTitle) { alert('Please fill in the game title and Internet Archive ID'); return; }
+    if (!gameId) { alert('Choose a classic or enter an Internet Archive ID.'); return; }
+    const finalTitle = gameTitle || gameId.replace(/^(msdos|arcade|console|atari|c64)_/i, '').replace(/_/g, ' ');
 
     const platform = document.getElementById('game-platform').value;
     const embedUrl = `https://archive.org/embed/${encodeURIComponent(gameId)}`;
@@ -528,7 +551,7 @@
 
     const data = {
       game_id: gameId,
-      game_title: gameTitle,
+      game_title: finalTitle,
       platform: platform,
       embed_url: embedUrl,
       thumbnail_url: thumbUrl
@@ -539,6 +562,12 @@
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(data)
     }).then(() => location.reload());
+  }
+
+  function chooseGame(id, title, platform) {
+    document.getElementById('game-id').value = id;
+    document.getElementById('game-title').value = title;
+    document.getElementById('game-platform').value = platform;
   }
 
   function deleteGame(id) {
