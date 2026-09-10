@@ -278,7 +278,7 @@
       let html = '<div class="gallery-grid">';
       GALLERY.forEach(img => {
         const caption = img.caption ? escapeHtml(img.caption) : '';
-        const src = img.data_uri; // embedded, works offline
+        const src = img.source_url || '';
         html += `
           <div class="gallery-item">
             <img src="${src}" alt="${caption}" onclick="window.open(this.src, '_blank')">

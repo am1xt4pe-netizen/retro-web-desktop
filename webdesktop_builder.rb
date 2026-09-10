@@ -10,13 +10,12 @@ require 'json'
 require 'fileutils'
 require 'securerandom'
 require 'base64'
+require 'uri'
 require 'rack/utils'
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-
-MAX_UPLOAD_BYTES = 8 * 1024 * 1024 # 8MB cap on file/gallery uploads
 
 configure do
   set :sessions, true
@@ -129,6 +128,7 @@ def init_database
       file_data BLOB,
       file_size INTEGER,
       mime_type TEXT DEFAULT 'image/png',
+      source_url TEXT,
       sort_order INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (desktop_id) REFERENCES desktops(id) ON DELETE CASCADE
@@ -156,6 +156,11 @@ def init_database
       FOREIGN KEY (desktop_id) REFERENCES desktops(id) ON DELETE CASCADE
     );
   SQL
+
+  # Gallery images are hosted externally; retain the legacy columns so
+  # existing databases migrate safely without copying binary image data.
+  gallery_columns = db.execute('PRAGMA table_info(gallery_images)').map { |column| column['name'] }
+  db.execute('ALTER TABLE gallery_images ADD COLUMN source_url TEXT') unless gallery_columns.include?('source_url')
 
   seed_default_data
 end
@@ -320,6 +325,14 @@ end
 # ============================================================================
 
 get '/' do
+  if logged_in?
+    redirect '/dashboard'
+  else
+    erb :welcome
+  end
+end
+
+get '/home' do
   if logged_in?
     redirect '/dashboard'
   else
@@ -560,75 +573,6 @@ delete '/api/desktop/:id/item/:item_id' do
 end
 
 # ============================================================================
-# ROUTES - FILE UPLOAD
-# ============================================================================
-
-post '/api/desktop/:id/upload' do
-  require_login
-  desktop = require_desktop_owner(params[:id].to_i)
-
-  unless params[:file] && params[:file][:tempfile]
-    halt 400, { success: false, error: 'No file uploaded' }.to_json
-  end
-
-  file = params[:file]
-  filename = File.basename(file[:filename].to_s) # strip any path component
-  tempfile = file[:tempfile]
-  mime_type = file[:type] || 'application/octet-stream'
-  file_size = tempfile.size
-
-  if file_size > MAX_UPLOAD_BYTES
-    halt 413, { success: false, error: "File too large (max #{MAX_UPLOAD_BYTES / 1024 / 1024}MB)" }.to_json
-  end
-
-  file_data = tempfile.read
-
-  item_type = case mime_type
-              when /image\// then 'image'
-              when /audio\// then 'music'
-              when /video\// then 'video'
-              when /text\// then 'text'
-              else 'file'
-              end
-
-  db.execute(
-    "INSERT INTO desktop_items (desktop_id, item_type, name, icon, file_path, file_size, mime_type, content, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [
-      desktop['id'],
-      item_type,
-      filename,
-      item_type == 'image' ? 'image' : 'file',
-      filename,
-      file_size,
-      mime_type,
-      Base64.strict_encode64(file_data),
-      next_sort_order('desktop_items', desktop['id'])
-    ]
-  )
-
-  content_type :json
-  { success: true, id: db.last_insert_row_id }.to_json
-end
-
-# Serves the raw bytes of an uploaded file/image item back out. Public (no
-# login) because it needs to work on published desktops for any visitor,
-# the same way gallery images already did.
-get '/api/desktop/:id/file/:item_id' do
-  desktop = db.execute("SELECT * FROM desktops WHERE id = ?", [params[:id].to_i]).first
-  halt 404 unless desktop
-
-  item = db.execute(
-    "SELECT * FROM desktop_items WHERE id = ? AND desktop_id = ?",
-    [params[:item_id], desktop['id']]
-  ).first
-  halt 404 unless item && item['content']
-
-  content_type item['mime_type'] || 'application/octet-stream'
-  attachment item['name'] if item['item_type'] == 'file'
-  Base64.strict_decode64(item['content'])
-end
-
-# ============================================================================
 # ROUTES - PHOTO GALLERY
 # ============================================================================
 
@@ -636,31 +580,24 @@ post '/api/desktop/:id/gallery' do
   require_login
   desktop = require_desktop_owner(params[:id].to_i)
 
-  unless params[:image] && params[:image][:tempfile]
-    halt 400, { success: false, error: 'No image uploaded' }.to_json
+  source_url = params[:source_url].to_s.strip
+  begin
+    parsed_url = URI.parse(source_url)
+  rescue URI::InvalidURIError
+    parsed_url = nil
   end
 
-  image = params[:image]
-  file_data = image[:tempfile].read
-
-  if file_data.bytesize > MAX_UPLOAD_BYTES
-    halt 413, { success: false, error: "Image too large (max #{MAX_UPLOAD_BYTES / 1024 / 1024}MB)" }.to_json
+  unless parsed_url && parsed_url.is_a?(URI::HTTPS) && parsed_url.host && parsed_url.userinfo.nil?
+    halt 400, { success: false, error: 'Use a complete HTTPS image URL without embedded credentials.' }.to_json
   end
-
-  # Bind as a genuine binary string. (SQLite3::Blob is not part of the
-  # public sqlite3 gem API in modern versions -- passing an ASCII-8BIT
-  # string is the correct way to insert BLOB data.)
-  binary_data = file_data.dup.force_encoding(Encoding::ASCII_8BIT)
 
   db.execute(
-    "INSERT INTO gallery_images (desktop_id, filename, caption, file_data, file_size, mime_type, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO gallery_images (desktop_id, filename, caption, source_url, sort_order) VALUES (?, ?, ?, ?, ?)",
     [
       desktop['id'],
-      File.basename(image[:filename].to_s),
-      params[:caption],
-      binary_data,
-      binary_data.bytesize,
-      image[:type] || 'image/png',
+      params[:title].to_s.strip.empty? ? 'Hosted image' : params[:title].to_s.strip,
+      params[:caption].to_s.strip,
+      source_url,
       next_sort_order('gallery_images', desktop['id'])
     ]
   )
@@ -692,8 +629,8 @@ get '/api/desktop/:id/gallery/:image_id' do
   ).first
   halt 404 unless image
 
-  content_type image['mime_type'] || 'image/png'
-  image['file_data']
+  redirect image['source_url'] if image['source_url']
+  halt 404
 end
 
 # ============================================================================
@@ -853,15 +790,10 @@ get '/desktop/:id/export' do
   )
   @icons = db.execute("SELECT * FROM icon_packs ORDER BY category, name")
 
-  # Embed gallery images as base64 data URIs so the exported HTML is
-  # genuinely standalone and doesn't depend on the original server still
-  # running to display photos.
   @gallery_images = db.execute(
     "SELECT * FROM gallery_images WHERE desktop_id = ? ORDER BY sort_order",
     [desktop['id']]
-  ).map do |img|
-    img.merge('data_uri' => "data:#{img['mime_type'] || 'image/png'};base64,#{Base64.strict_encode64(img['file_data'].to_s)}")
-  end
+  )
 
   # desktop_items.content is already base64 for uploaded file/image items,
   # so it can become a data URI directly without touching the DB again.

@@ -523,7 +523,7 @@
         const caption = img.caption ? escapeHtml(img.caption) : '';
         html += `
           <div class="gallery-item">
-            <img src="/api/desktop/${desktopId}/gallery/${img.id}" alt="${caption}" onclick="window.open(this.src, '_blank')">
+            ${img.source_url ? `<img src="${img.source_url}" alt="${caption}" onclick="window.open(this.src, '_blank')">` : ''}
             ${caption ? `<div class="caption">${caption}</div>` : ''}
           </div>
         `;

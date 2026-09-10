@@ -635,6 +635,27 @@ body {
   border-radius: 4px;
 }
 
+.gallery-link-preview {
+  align-items: center;
+  background: var(--light);
+  border: 1px dashed var(--border);
+  color: var(--secondary);
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  min-height: 110px;
+  overflow: hidden;
+  padding: 10px;
+  text-align: center;
+}
+
+.gallery-link-preview img {
+  display: block;
+  max-height: 180px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .gallery-thumb .delete {
   position: absolute;
   top: 4px;
@@ -1877,4 +1898,728 @@ body[data-theme="theme-10"] .landing-header h1 {
 @media (prefers-reduced-motion: reduce) {
   body[data-theme]::before,
   body[data-theme] .landing-header h1 { animation: none; }
+}
+
+/* Theme-specific pre-landing screen. */
+.welcome-page {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.welcome-stage {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px;
+}
+
+.welcome-screen {
+  border: 2px solid var(--theme-accent);
+  box-shadow: 0 0 0 8px rgba(0,0,0,0.22), 0 18px 40px rgba(0,0,0,0.6);
+  max-width: 760px;
+  padding: clamp(42px, 10vw, 110px) 36px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.welcome-screen::before,
+.welcome-screen::after {
+  content: '';
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+
+.welcome-screen::before {
+  border-bottom: 1px solid var(--theme-accent);
+  border-top: 1px solid var(--theme-accent);
+  height: 10px;
+  top: 20px;
+}
+
+.welcome-screen::after {
+  background: var(--vhs-noise);
+  inset: 0;
+  mix-blend-mode: overlay;
+  opacity: 0.16;
+  z-index: 0;
+}
+
+.welcome-screen > * { position: relative; z-index: 1; }
+
+.welcome-mark,
+.welcome-status,
+.welcome-meta,
+.welcome-enter {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.welcome-mark {
+  color: var(--theme-accent);
+  font-size: 0.8rem;
+  margin-bottom: 26px;
+}
+
+.welcome-status {
+  color: var(--theme-ink);
+  font-size: 0.68rem;
+  margin-bottom: 18px;
+  opacity: 0.75;
+}
+
+.welcome-screen h1 {
+  color: var(--theme-ink);
+  font-family: var(--theme-display, Georgia, serif);
+  font-size: clamp(2.4rem, 8vw, 5.4rem);
+  letter-spacing: -0.08em;
+  line-height: 0.95;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+
+.welcome-meta {
+  color: var(--theme-ink);
+  font-size: 0.82rem;
+  margin-bottom: 38px;
+  opacity: 0.78;
+}
+
+.welcome-enter {
+  background: var(--theme-accent);
+  border: 1px solid var(--theme-accent-dark);
+  box-shadow: 3px 3px 0 var(--theme-shadow);
+  color: var(--theme-button-ink);
+  display: inline-block;
+  font-size: 0.78rem;
+  padding: 13px 18px;
+  text-decoration: none;
+}
+
+.welcome-enter:hover { filter: brightness(1.15); }
+
+body[data-theme="theme-1"] .welcome-stage {
+  background: radial-gradient(120% 90% at 50% 40%, #1a1420 0%, #050308 70%);
+}
+
+body[data-theme="theme-1"] .welcome-screen {
+  border-color: #fff;
+  box-shadow: 0 0 0 8px rgba(0,0,0,0.35), 0 0 25px rgba(0,229,255,0.22);
+}
+
+body[data-theme="theme-1"] .welcome-screen h1 {
+  color: #fff;
+  text-shadow: 2px 0 rgba(255,40,90,0.85), -2px 0 rgba(0,229,255,0.85);
+}
+
+body[data-theme="theme-2"] .welcome-stage {
+  background: #000;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0 2px, transparent 2px 4px);
+}
+
+body[data-theme="theme-2"] .welcome-screen {
+  border-radius: 18px;
+  border-color: #ffb000;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 0 30px rgba(255,176,0,0.15);
+}
+
+body[data-theme="theme-2"] .welcome-screen h1 {
+  color: #ffb000;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 6px rgba(255,176,0,0.7);
+}
+
+body[data-theme="theme-2"] .welcome-enter { background: #ffb000; color: #170c00; }
+
+body[data-theme="theme-3"] .welcome-stage {
+  background: radial-gradient(140% 120% at 50% 20%, #3a2a18 0%, #120c05 70%);
+}
+
+body[data-theme="theme-3"] .welcome-screen {
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 7px, rgba(255,255,255,0.04) 7px 9px, transparent 9px 14px), linear-gradient(180deg, #7a4a22, #3f2410);
+  border: 14px solid #5c5c5c;
+  border-radius: 14px;
+  box-shadow: inset 0 2px 0 rgba(255,220,160,0.25), inset 0 -6px 18px rgba(0,0,0,0.6), 0 18px 40px rgba(0,0,0,0.6);
+}
+
+body[data-theme="theme-3"] .welcome-screen h1 {
+  color: #7fd0a0;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 8px rgba(120,220,160,0.6);
+}
+
+body[data-theme="theme-4"] .welcome-stage { background: #0a0a0a; }
+body[data-theme="theme-4"] .welcome-screen { border: 0; box-shadow: none; }
+body[data-theme="theme-4"] .welcome-screen::before {
+  background: linear-gradient(180deg, #2a2a2a, #111);
+  border: 2px solid #000;
+  border-radius: 8px;
+  height: 46px;
+  left: 13%;
+  right: 13%;
+  top: 18px;
+}
+body[data-theme="theme-4"] .welcome-screen h1 {
+  color: #fff;
+  font-family: 'Arial Black', sans-serif;
+  letter-spacing: 0.08em;
+}
+body[data-theme="theme-4"] .welcome-screen h1::before { content: '▶ '; color: #ff3b30; }
+
+body[data-theme="theme-5"] .welcome-stage {
+  background: #111;
+  background-image: var(--vhs-noise);
+}
+body[data-theme="theme-5"] .welcome-screen { border-color: #fff; }
+body[data-theme="theme-5"] .welcome-screen h1 {
+  color: #fff;
+  font-family: 'Arial Black', sans-serif;
+  letter-spacing: 0.1em;
+  mix-blend-mode: difference;
+}
+body[data-theme="theme-5"] .welcome-enter { border-color: #fff; }
+
+body[data-theme="theme-6"] .welcome-stage {
+  background: linear-gradient(180deg, #c9b27a, #9c7a44);
+  background-image: radial-gradient(circle, rgba(0,0,0,0.25) 1px, transparent 1.5px), radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1.5px);
+  background-size: 9px 9px, 13px 13px;
+}
+body[data-theme="theme-6"] .welcome-screen { background: rgba(201,178,122,0.72); border-color: #5a3416; border-radius: 4px; }
+body[data-theme="theme-6"] .welcome-screen h1 { color: #5a3416; font-family: Georgia, serif; text-shadow: 2px 2px 0 rgba(255,240,200,0.5); }
+
+body[data-theme="theme-7"] .welcome-stage {
+  background: radial-gradient(120% 100% at 50% 50%, #caa06a 0%, #6e4a24 60%, #2a1a0a 100%);
+}
+body[data-theme="theme-7"] .welcome-screen { border: 0; box-shadow: none; }
+body[data-theme="theme-7"] .welcome-screen h1 { color: #3a2410; font-family: Georgia, serif; font-size: clamp(4rem, 14vw, 8rem); }
+body[data-theme="theme-7"] .welcome-screen h1::after { color: #3a2410; content: ' 2'; display: block; font-size: 0.6em; }
+
+body[data-theme="theme-8"] .welcome-stage { background: #000; }
+body[data-theme="theme-8"] .welcome-screen { border: 0; padding-bottom: 20px; padding-top: 20px; }
+body[data-theme="theme-8"] .welcome-screen::before {
+  background: linear-gradient(90deg, #fff 0 14.28%, #ff0 14.28% 28.5%, #0ff 28.5% 42.8%, #0f0 42.8% 57%, #f0f 57% 71.2%, #f00 71.2% 85.5%, #00f 85.5%);
+  border: 0;
+  height: 55%;
+  top: 0;
+}
+body[data-theme="theme-8"] .welcome-screen h1 { color: #fff; font-family: 'Arial Black', sans-serif; mix-blend-mode: difference; }
+
+body[data-theme="theme-9"] .welcome-stage {
+  background: linear-gradient(180deg, #1a1a4a 0%, #5a2a6a 30%, #c03a6a 55%, #ff7a2a 78%, #ffd24a 100%);
+}
+body[data-theme="theme-9"] .welcome-screen { border: 0; box-shadow: none; }
+body[data-theme="theme-9"] .welcome-screen h1 {
+  background: linear-gradient(180deg, #fff, #cfd6e0 49%, #3a4a6a 51%, #9aa8c0);
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0,0,0,0.35));
+  font-family: 'Arial Black', sans-serif;
+}
+
+body[data-theme="theme-10"] .welcome-stage { background: #000; }
+body[data-theme="theme-10"] .welcome-screen {
+  background: linear-gradient(180deg, #e8c98a, #c98a5a 45%, #7a3a2a);
+  border: 0;
+  border-radius: 6px;
+  filter: sepia(0.35) contrast(0.92);
+}
+body[data-theme="theme-10"] .welcome-screen h1 { color: #fff; text-shadow: 1px 1px 2px #000; }
+
+@media (max-width: 600px) {
+  .welcome-stage { padding: 20px; }
+  .welcome-screen { padding-left: 20px; padding-right: 20px; }
+}
+
+/* Welcome screen compositions mirror the ten vhsstyles.html directions. */
+body[data-theme].welcome-page > .theme-switcher {
+  background: rgba(0,0,0,0.55);
+  border-color: rgba(255,255,255,0.45);
+  color: #fff;
+  position: fixed;
+  right: 16px;
+  top: 14px;
+  z-index: 5000;
+}
+
+.welcome-stage {
+  padding: 32px;
+}
+
+.welcome-screen {
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+  max-width: 1100px;
+  min-height: 340px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.welcome-screen::before,
+.welcome-screen::after {
+  border: 0;
+  inset: 0;
+  height: auto;
+}
+
+.welcome-screen::after {
+  background: var(--vhs-noise);
+}
+
+.welcome-mark {
+  background: rgba(0,0,0,0.55);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  left: 10px;
+  letter-spacing: 1px;
+  margin: 0;
+  padding: 4px 8px;
+  position: absolute;
+  text-align: left;
+  top: 10px;
+}
+
+.welcome-status,
+.welcome-meta,
+.welcome-enter {
+  position: absolute;
+}
+
+.welcome-status {
+  color: #fff;
+  font-size: 11px;
+  left: 14px;
+  letter-spacing: 2px;
+  margin: 0;
+  top: 14px;
+}
+
+.welcome-screen h1 {
+  color: #fff;
+  font-size: 34px;
+  letter-spacing: 2px;
+  line-height: 1;
+  margin: 0;
+  position: absolute;
+  text-transform: uppercase;
+}
+
+.welcome-meta {
+  bottom: 12px;
+  color: #fff;
+  font-size: 11px;
+  left: 14px;
+  letter-spacing: 2px;
+  margin: 0;
+}
+
+.welcome-enter {
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.7);
+  bottom: 12px;
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  right: 14px;
+  text-transform: uppercase;
+}
+
+/* 01 — VHS TRACKING */
+body[data-theme="theme-1"] .welcome-stage {
+  background: radial-gradient(120% 90% at 50% 40%, #1a1420 0%, #050308 70%);
+}
+
+body[data-theme="theme-1"] .welcome-screen::before {
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 3px);
+  display: block;
+}
+
+body[data-theme="theme-1"] .welcome-screen::after {
+  background: linear-gradient(0deg, transparent, rgba(255,255,255,0.55) 45%, #fff 50%, rgba(255,255,255,0.55) 55%, transparent);
+  background-size: 100% 26px;
+  background-position: 0 -26px;
+  mix-blend-mode: screen;
+  opacity: 0.35;
+  animation: welcome-track 5.5s linear infinite;
+}
+
+body[data-theme="theme-1"] .welcome-screen h1 {
+  font-family: 'Arial Black', sans-serif;
+  left: 50%;
+  top: 50%;
+  text-shadow: 2.5px 0 rgba(255,40,90,0.85), -2.5px 0 rgba(0,229,255,0.85);
+  transform: translate(-50%, -50%);
+}
+
+/* 02 — AMBER PHOSPHOR */
+body[data-theme="theme-2"] .welcome-stage { background: #000; }
+body[data-theme="theme-2"] .welcome-screen {
+  background: radial-gradient(120% 100% at 50% 50%, #1a0e00 0%, #000 80%);
+  border-radius: 18px;
+  box-shadow: inset 0 0 80px 20px rgba(0,0,0,0.95), 0 0 30px rgba(255,176,0,0.15);
+}
+body[data-theme="theme-2"] .welcome-screen::before {
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0 2px, transparent 2px 4px);
+  border-radius: 18px;
+  display: block;
+}
+body[data-theme="theme-2"] .welcome-mark { background: transparent; color: #ffb000; }
+body[data-theme="theme-2"] .welcome-status,
+body[data-theme="theme-2"] .welcome-meta { color: #ffb000; text-shadow: 0 0 6px rgba(255,176,0,0.7); }
+body[data-theme="theme-2"] .welcome-status { left: auto; right: 22px; top: 22px; }
+body[data-theme="theme-2"] .welcome-screen h1 {
+  color: #ffb000;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  left: 22px;
+  letter-spacing: 0;
+  text-align: left;
+  text-shadow: 0 0 6px rgba(255,176,0,0.7);
+  top: 72px;
+}
+body[data-theme="theme-2"] .welcome-meta { bottom: auto; left: 22px; top: 99px; }
+body[data-theme="theme-2"] .welcome-enter { background: transparent; border: 0; bottom: auto; color: #ffb000; left: 22px; padding: 0; right: auto; top: 126px; }
+
+/* 03 — WOODGRAIN TV SET */
+body[data-theme="theme-3"] .welcome-stage {
+  background: radial-gradient(140% 120% at 50% 20%, #3a2a18 0%, #120c05 70%);
+}
+body[data-theme="theme-3"] .welcome-screen {
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 7px, rgba(255,255,255,0.04) 7px 9px, transparent 9px 14px), linear-gradient(180deg, #7a4a22, #3f2410);
+  border: 16px solid #5c5c5c;
+  border-radius: 14px;
+  box-shadow: inset 0 2px 0 rgba(255,220,160,0.25), inset 0 -6px 18px rgba(0,0,0,0.6), 0 18px 40px rgba(0,0,0,0.6);
+}
+body[data-theme="theme-3"] .welcome-screen::before {
+  background: radial-gradient(120% 100% at 50% 40%, #153 0%, #041 70%);
+  border: 10px solid #2c2c2c;
+  border-radius: 4px;
+  display: block;
+  inset: 10px;
+}
+body[data-theme="theme-3"] .welcome-mark,
+body[data-theme="theme-3"] .welcome-status { display: none; }
+body[data-theme="theme-3"] .welcome-screen h1 {
+  color: #7fd0a0;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  letter-spacing: 3px;
+  right: 28px;
+  text-shadow: 0 0 8px rgba(120,220,160,0.6);
+  top: auto;
+  transform: none;
+}
+body[data-theme="theme-3"] .welcome-meta { color: #7fd0a0; left: 50%; transform: translateX(-50%); }
+
+/* 04 — VHS TAPE / MENU */
+body[data-theme="theme-4"] .welcome-stage { background: #0a0a0a; }
+body[data-theme="theme-4"] .welcome-screen { border-radius: 0; }
+body[data-theme="theme-4"] .welcome-screen::before {
+  background: linear-gradient(180deg, #2a2a2a, #111);
+  border: 2px solid #000;
+  border-radius: 8px;
+  display: block;
+  height: 46px;
+  inset: 18px 13% auto;
+}
+body[data-theme="theme-4"] .welcome-mark { display: none; }
+body[data-theme="theme-4"] .welcome-status { color: #ff3b30; left: 14px; top: 14px; }
+body[data-theme="theme-4"] .welcome-screen h1 {
+  color: #fff;
+  font-family: 'Arial Black', sans-serif;
+  font-size: 40px;
+  letter-spacing: 4px;
+  left: 50%;
+  top: 110px;
+  transform: translateX(-50%);
+}
+body[data-theme="theme-4"] .welcome-screen h1::before { content: '▶ '; }
+body[data-theme="theme-4"] .welcome-meta { bottom: 14px; color: #8fd; font-size: 12px; }
+
+/* 05 — CHANNEL SNOW */
+body[data-theme="theme-5"] .welcome-stage { background: #111; }
+body[data-theme="theme-5"] .welcome-screen::before { background: var(--vhs-noise); display: block; opacity: 0.85; }
+body[data-theme="theme-5"] .welcome-mark,
+body[data-theme="theme-5"] .welcome-status,
+body[data-theme="theme-5"] .welcome-meta { mix-blend-mode: difference; }
+body[data-theme="theme-5"] .welcome-screen h1 {
+  color: #fff;
+  font-family: 'Arial Black', sans-serif;
+  font-size: 34px;
+  letter-spacing: 6px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+body[data-theme="theme-5"] .welcome-enter { mix-blend-mode: difference; }
+
+/* 06 — 70s LIVING ROOM */
+body[data-theme="theme-6"] .welcome-stage {
+  background: linear-gradient(180deg, #c9b27a 0%, #b7a06a 55%, #9c7a44 100%);
+}
+body[data-theme="theme-6"] .welcome-screen::before {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.25) 1px, transparent 1.5px), radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1.5px);
+  background-size: 9px 9px, 13px 13px;
+  display: block;
+  opacity: 0.5;
+}
+body[data-theme="theme-6"] .welcome-screen h1 {
+  color: #5a3416;
+  font-family: Georgia, serif;
+  font-size: 30px;
+  left: 50%;
+  text-shadow: 2px 2px 0 rgba(255,240,200,0.5);
+  top: 96px;
+  transform: translateX(-50%);
+}
+body[data-theme="theme-6"] .welcome-meta { color: #7a4a1a; left: 50%; top: 138px; transform: translateX(-50%); }
+body[data-theme="theme-6"] .welcome-enter { bottom: 34px; }
+
+/* 07 — FILM LEADER */
+body[data-theme="theme-7"] .welcome-stage {
+  background: radial-gradient(120% 100% at 50% 50%, #caa06a 0%, #6e4a24 60%, #2a1a0a 100%);
+}
+body[data-theme="theme-7"] .welcome-screen::before {
+  background-image: radial-gradient(circle at 50% 50%, #000 4px, transparent 4.5px);
+  background-size: 26px 20px;
+  display: block;
+  height: 20px;
+  inset: 6px 0 auto;
+}
+body[data-theme="theme-7"] .welcome-screen h1 {
+  color: #3a2410;
+  font-family: Georgia, serif;
+  font-size: 70px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+body[data-theme="theme-7"] .welcome-meta { color: #3a2410; left: 50%; transform: translateX(-50%); }
+
+/* 08 — TEST PATTERN */
+body[data-theme="theme-8"] .welcome-stage { background: #000; }
+body[data-theme="theme-8"] .welcome-screen { border-radius: 0; }
+body[data-theme="theme-8"] .welcome-screen::before {
+  background: linear-gradient(90deg, #fff 0 14.28%, #ff0 14.28% 28.5%, #0ff 28.5% 42.8%, #0f0 42.8% 57%, #f0f 57% 71.2%, #f00 71.2% 85.5%, #00f 85.5% 100%);
+  display: block;
+  height: 55%;
+  inset: 0 0 auto;
+}
+body[data-theme="theme-8"] .welcome-mark,
+body[data-theme="theme-8"] .welcome-status { color: #fff; mix-blend-mode: difference; }
+body[data-theme="theme-8"] .welcome-screen h1 { color: #fff; font-family: monospace; font-size: 16px; left: 14px; top: 68%; }
+body[data-theme="theme-8"] .welcome-meta { bottom: 14px; }
+
+/* 09 — SUNSET CHROME */
+body[data-theme="theme-9"] .welcome-stage {
+  background: linear-gradient(180deg, #1a1a4a 0%, #5a2a6a 30%, #c03a6a 55%, #ff7a2a 78%, #ffd24a 100%);
+}
+body[data-theme="theme-9"] .welcome-screen::before {
+  background: radial-gradient(circle at 50% 42%, #ffe08a, #ff7a2a);
+  border-radius: 50%;
+  display: block;
+  height: 120px;
+  left: 50%;
+  top: 34%;
+  transform: translateX(-50%);
+  width: 120px;
+}
+body[data-theme="theme-9"] .welcome-screen h1 {
+  background: linear-gradient(180deg, #fff, #cfd6e0 49%, #3a4a6a 51%, #9aa8c0);
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0,0,0,0.35));
+  font-family: 'Arial Black', sans-serif;
+  font-size: 46px;
+  left: 50%;
+  top: 44%;
+  transform: translateX(-50%);
+}
+body[data-theme="theme-9"] .welcome-meta { color: #fff; left: 50%; transform: translateX(-50%); }
+
+/* 10 — SUPER-8 HOME MOVIE */
+body[data-theme="theme-10"] .welcome-stage { background: #000; }
+body[data-theme="theme-10"] .welcome-screen {
+  background: linear-gradient(180deg, #e8c98a 0%, #c98a5a 45%, #7a3a2a 100%);
+  border-radius: 6px;
+  filter: sepia(0.35) contrast(0.92) brightness(1.02);
+  margin-left: 34px;
+  margin-right: 34px;
+}
+body[data-theme="theme-10"] .welcome-screen::before {
+  background-image: radial-gradient(circle at 50% 50%, #2a2a2a 4px, transparent 4.5px);
+  background-size: 34px 22px;
+  display: block;
+  inset: 0 auto 0 -34px;
+  width: 34px;
+}
+body[data-theme="theme-10"] .welcome-screen::after {
+  background: var(--vhs-noise);
+  inset: 0;
+  opacity: 0.35;
+}
+body[data-theme="theme-10"] .welcome-screen h1 {
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  left: 44px;
+  top: 34px;
+  text-shadow: 1px 1px 2px #000;
+}
+body[data-theme="theme-10"] .welcome-meta { bottom: 34px; right: 44px; }
+
+@keyframes welcome-track {
+  from { background-position: 0 -26px; }
+  to { background-position: 0 340px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-screen::after,
+  .welcome-screen { animation: none; }
+}
+
+/* The welcome art direction fills the viewport; content is an overlay, not a card. */
+.welcome-stage {
+  min-height: 100vh;
+  padding: 0;
+}
+
+.welcome-screen {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  max-width: none;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.welcome-screen::before {
+  border: 0;
+  border-radius: 0;
+}
+
+body[data-theme="theme-1"] .welcome-screen {
+  background: radial-gradient(120% 90% at 50% 40%, #1a1420 0%, #050308 70%);
+}
+
+body[data-theme="theme-1"] .welcome-stage {
+  background: #050308;
+}
+
+body[data-theme="theme-2"] .welcome-screen {
+  background: radial-gradient(120% 100% at 50% 50%, #1a0e00 0%, #000 80%);
+  border-radius: 0;
+  box-shadow: inset 0 0 140px 35px rgba(0,0,0,0.95);
+}
+
+body[data-theme="theme-2"] .welcome-stage {
+  background: #000;
+}
+
+body[data-theme="theme-3"] .welcome-screen {
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 7px, rgba(255,255,255,0.04) 7px 9px, transparent 9px 14px),
+    linear-gradient(180deg, #7a4a22, #3f2410);
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 2px 0 rgba(255,220,160,0.25), inset 0 -20px 40px rgba(0,0,0,0.6);
+}
+
+body[data-theme="theme-3"] .welcome-screen::before {
+  background: radial-gradient(120% 100% at 50% 40%, #153 0%, #041 70%);
+  border: 18px solid #5c5c5c;
+  border-radius: 8px;
+  inset: 8% 6%;
+}
+
+body[data-theme="theme-3"] .welcome-screen h1 {
+  top: 50%;
+}
+
+body[data-theme="theme-4"] .welcome-screen {
+  background: #0a0a0a;
+}
+
+body[data-theme="theme-4"] .welcome-stage,
+body[data-theme="theme-5"] .welcome-stage,
+body[data-theme="theme-8"] .welcome-stage {
+  background: #000;
+}
+
+body[data-theme="theme-4"] .welcome-screen::before {
+  left: 13%;
+  right: 13%;
+}
+
+body[data-theme="theme-5"] .welcome-screen {
+  background: #111;
+  border: 0;
+}
+
+body[data-theme="theme-5"] .welcome-screen::before {
+  border-radius: 0;
+}
+
+body[data-theme="theme-6"] .welcome-screen {
+  background:
+    radial-gradient(circle, rgba(0,0,0,0.25) 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1.5px),
+    linear-gradient(180deg, #c9b27a 0%, #b7a06a 55%, #9c7a44 100%);
+  background-position: 0 0, 4px 4px, 0 0;
+  background-size: 9px 9px, 13px 13px, 100% 100%;
+}
+
+body[data-theme="theme-6"] .welcome-stage {
+  background: #9c7a44;
+}
+
+body[data-theme="theme-7"] .welcome-screen {
+  background: radial-gradient(120% 100% at 50% 50%, #caa06a 0%, #6e4a24 60%, #2a1a0a 100%);
+}
+
+body[data-theme="theme-7"] .welcome-stage {
+  background: #2a1a0a;
+}
+
+body[data-theme="theme-8"] .welcome-screen {
+  background: #000;
+}
+
+body[data-theme="theme-8"] .welcome-screen::before {
+  height: 55%;
+}
+
+body[data-theme="theme-9"] .welcome-screen {
+  background: linear-gradient(180deg, #1a1a4a 0%, #5a2a6a 30%, #c03a6a 55%, #ff7a2a 78%, #ffd24a 100%);
+}
+
+body[data-theme="theme-9"] .welcome-stage {
+  background: #1a1a4a;
+}
+
+body[data-theme="theme-10"] .welcome-screen {
+  background: linear-gradient(180deg, #e8c98a 0%, #c98a5a 45%, #7a3a2a 100%);
+  border-radius: 0;
+  filter: sepia(0.35) contrast(0.92) brightness(1.02);
+  margin: 0;
+}
+
+body[data-theme="theme-10"] .welcome-screen::before {
+  inset: 0 auto 0 0;
+  width: 34px;
+}
+
+body[data-theme="theme-10"] .welcome-screen h1 {
+  left: 44px;
+}
+
+body[data-theme="theme-10"] .welcome-meta {
+  right: 44px;
 }

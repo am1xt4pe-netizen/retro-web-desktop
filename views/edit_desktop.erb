@@ -144,7 +144,6 @@
             <label>Type</label>
             <select id="new-item-type">
               <option value="folder">Folder</option>
-              <option value="file">File</option>
               <option value="link">Link</option>
               <option value="text">Text Document</option>
             </select>
@@ -180,24 +179,37 @@
 
         <!-- Gallery Tab -->
         <div class="tab-content" id="tab-gallery">
-          <h3>Upload Image</h3>
-          <form id="gallery-form" enctype="multipart/form-data">
+          <h3>Add hosted image</h3>
+          <p class="help-text">Keep your gallery fast and portable by pasting a secure HTTPS image link. Your image stays hosted at its original source.</p>
+          <form id="gallery-form">
             <div class="form-group">
-              <label>Image</label>
-              <input type="file" id="gallery-image" name="image" accept="image/*">
+              <label for="gallery-source-url">Secure image link</label>
+              <input type="url" id="gallery-source-url" name="source_url" placeholder="https://images.example.com/my-photo.jpg" inputmode="url" required>
+              <small>Use a direct link that ends in an image file or points to an image CDN.</small>
             </div>
             <div class="form-group">
-              <label>Caption (optional)</label>
+              <label for="gallery-title">Title (optional)</label>
+              <input type="text" id="gallery-title" name="title" placeholder="Summer 1979">
+            </div>
+            <div class="form-group">
+              <label for="gallery-caption">Caption (optional)</label>
               <input type="text" id="gallery-caption" name="caption" placeholder="Image caption">
             </div>
-            <button type="button" class="btn btn-primary btn-block" onclick="uploadGalleryImage()">Upload</button>
+            <div class="gallery-link-preview" id="gallery-link-preview" aria-live="polite">
+              <span>Paste a link to preview it here</span>
+            </div>
+            <button type="button" class="btn btn-primary btn-block" onclick="addGalleryImage()">Add to Gallery</button>
           </form>
 
           <h3>Gallery Images</h3>
           <div class="gallery-thumbs" id="gallery-thumbs">
             <% @gallery_images.each do |img| %>
               <div class="gallery-thumb" data-id="<%= img['id'] %>">
-                <img src="/api/desktop/<%= @desktop['id'] %>/gallery/<%= img['id'] %>" alt="<%= h img['caption'] %>">
+                <% if img['source_url'] %>
+                  <img src="<%= h img['source_url'] %>" alt="<%= h img['caption'] %>">
+                <% else %>
+                  <span class="gallery-thumb-legacy">Legacy image unavailable</span>
+                <% end %>
                 <button class="btn-icon delete" onclick="deleteGalleryImage(<%= img['id'] %>)">×</button>
               </div>
             <% end %>
@@ -412,20 +424,41 @@
       .then(() => location.reload());
   }
 
-  function uploadGalleryImage() {
-    const fileInput = document.getElementById('gallery-image');
-    if (!fileInput.files[0]) { alert('Please choose an image'); return; }
-    const form = document.getElementById('gallery-form');
-    const formData = new FormData(form);
-
+  function addGalleryImage() {
+    const sourceUrl = document.getElementById('gallery-source-url').value.trim();
+    if (!sourceUrl || !sourceUrl.toLowerCase().startsWith('https://')) {
+      alert('Please paste a secure HTTPS image link.');
+      return;
+    }
+    const data = {
+      source_url: sourceUrl,
+      title: document.getElementById('gallery-title').value.trim(),
+      caption: document.getElementById('gallery-caption').value.trim()
+    };
     fetch(`/api/desktop/${desktopId}/gallery`, {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(data)
     }).then(r => {
-      if (!r.ok) return r.json().then(d => { throw new Error(d.error || 'Upload failed'); });
+      if (!r.ok) return r.json().then(d => { throw new Error(d.error || 'Could not add image'); });
       location.reload();
     }).catch(err => alert(err.message));
   }
+
+  document.getElementById('gallery-source-url').addEventListener('input', function() {
+    const preview = document.getElementById('gallery-link-preview');
+    const url = this.value.trim();
+    preview.innerHTML = '';
+    if (!url) {
+      preview.innerHTML = '<span>Paste a link to preview it here</span>';
+      return;
+    }
+    const image = new Image();
+    image.alt = 'Image preview';
+    image.onload = () => preview.replaceChildren(image);
+    image.onerror = () => { preview.innerHTML = '<span>That link could not be previewed. Check that it is a direct HTTPS image link.</span>'; };
+    image.src = url;
+  });
 
   function deleteGalleryImage(id) {
     if (!confirm('Delete this image?')) return;

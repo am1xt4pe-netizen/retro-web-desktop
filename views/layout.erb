@@ -31,6 +31,24 @@
         const next = (themes.indexOf(body.dataset.theme) + 1) % themes.length;
         applyTheme(themes[next]);
       });
+
+      if (body.classList.contains('welcome-page')) {
+        let timer;
+        const cycle = () => {
+          const next = (themes.indexOf(body.dataset.theme) + 1) % themes.length;
+          applyTheme(themes[next]);
+        };
+        const startCycle = () => {
+          clearInterval(timer);
+          timer = setInterval(cycle, 6500);
+        };
+        const welcome = document.querySelector('.welcome-screen');
+        welcome.addEventListener('mouseenter', () => clearInterval(timer));
+        welcome.addEventListener('mouseleave', startCycle);
+        welcome.addEventListener('focusin', () => clearInterval(timer));
+        welcome.addEventListener('focusout', startCycle);
+        startCycle();
+      }
     })();
   </script>
 </body>
