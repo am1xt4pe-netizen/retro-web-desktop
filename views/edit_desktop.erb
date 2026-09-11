@@ -46,26 +46,58 @@
 
         <!-- Appearance Tab -->
         <div class="tab-content active" id="tab-appearance">
-          <h3>Background</h3>
-          <div class="form-group">
-            <label>Background Color</label>
-            <input type="color" id="bg-color" value="<%= @desktop['background_color'] %>" onchange="updateDesktop()">
+          <div class="customization-intro">
+            <span class="eyebrow">DESKTOP STUDIO</span>
+            <h2>Shape your mixtape</h2>
+            <p>Choose a visual language, then tune the atmosphere. Changes preview automatically.</p>
           </div>
+          <h3>Object language</h3>
           <div class="form-group">
-            <label>Background Image URL</label>
-            <input type="text" id="bg-image" value="<%= h(@desktop['background_image'] || '') %>" placeholder="https://..." onchange="updateDesktop()">
+            <label for="design-concept">Window &amp; button concept</label>
+            <select id="design-concept" onchange="updateDesktop()">
+              <% {
+                1 => 'Hearth Capsule', 2 => 'Departure Board', 3 => 'Bubble Dial',
+                4 => 'Fondue Arch', 5 => 'Lava Portal', 6 => 'Record Sleeve',
+                7 => 'Horizon Disc', 8 => 'Porthole Cabinet', 9 => 'Egg Pod',
+                10 => 'Pillow Console'
+              }.each do |number, name| %>
+                <option value="<%= number %>" <%= @desktop['design_concept'].to_i == number ? 'selected' : '' %>><%= format('%02d', number) %> — <%= name %></option>
+              <% end %>
+            </select>
+            <small>This controls the silhouettes, controls, spacing, and surfaces used by every desktop window.</small>
           </div>
-          <div class="form-group">
-            <label>Background Style</label>
-            <select id="bg-style" onchange="updateDesktop()">
+          <div class="form-group effect-control">
+            <label for="effects-intensity">Analog atmosphere <output id="effects-intensity-val"><%= @desktop['effects_intensity'] || 60 %>%</output></label>
+            <input type="range" id="effects-intensity" min="0" max="100" value="<%= @desktop['effects_intensity'] || 60 %>" oninput="updateDesktop()">
+          </div>
+          <label class="toggle-control">
+            <input type="checkbox" id="effects-enabled" <%= @desktop['effects_enabled'].to_i == 1 ? 'checked' : '' %> onchange="updateDesktop()">
+            <span>Enable texture, glow, and motion effects</span>
+          </label>
+
+          <details class="customization-section" open>
+            <summary>Wallpaper</summary>
+            <div class="form-group">
+              <label>Background Color</label>
+              <input type="color" id="bg-color" value="<%= @desktop['background_color'] %>" onchange="updateDesktop()">
+            </div>
+            <div class="form-group">
+              <label>Background Image URL</label>
+              <input type="text" id="bg-image" value="<%= h(@desktop['background_image'] || '') %>" placeholder="https://..." onchange="updateDesktop()">
+            </div>
+            <div class="form-group">
+              <label>Background Style</label>
+              <select id="bg-style" onchange="updateDesktop()">
               <option value="stretch" <%= @desktop['wallpaper_style'] == 'stretch' ? 'selected' : '' %>>Stretch</option>
               <option value="tile" <%= @desktop['wallpaper_style'] == 'tile' ? 'selected' : '' %>>Tile</option>
               <option value="center" <%= @desktop['wallpaper_style'] == 'center' ? 'selected' : '' %>>Center</option>
               <option value="fit" <%= @desktop['wallpaper_style'] == 'fit' ? 'selected' : '' %>>Fit</option>
-            </select>
-          </div>
+              </select>
+            </div>
+          </details>
 
-          <h3>Typography</h3>
+          <details class="customization-section">
+            <summary>Typography &amp; icons</summary>
           <div class="form-group">
             <label>Font Family</label>
             <select id="font-family" onchange="updateDesktop()">
@@ -85,8 +117,10 @@
             <input type="range" id="icon-size" min="32" max="96" value="<%= @desktop['icon_size'] %>" oninput="updateDesktop()">
             <span id="icon-size-val"><%= @desktop['icon_size'] %>px</span>
           </div>
+          </details>
 
-          <h3>Taskbar</h3>
+          <details class="customization-section">
+            <summary>Taskbar &amp; windows</summary>
           <div class="form-group">
             <label>Position</label>
             <select id="taskbar-pos" onchange="updateDesktop()">
@@ -100,9 +134,8 @@
             <label>Taskbar Color</label>
             <input type="color" id="taskbar-color" value="<%= @desktop['taskbar_color'] %>" onchange="updateDesktop()">
           </div>
-
-          <h3>Window Theme</h3>
           <div class="form-group">
+            <label>Classic window base</label>
             <select id="window-theme" onchange="updateDesktop()">
               <option value="classic" <%= @desktop['window_theme'] == 'classic' ? 'selected' : '' %>>Classic 95</option>
               <option value="modern" <%= @desktop['window_theme'] == 'modern' ? 'selected' : '' %>>Modern Flat</option>
@@ -110,8 +143,10 @@
               <option value="dark" <%= @desktop['window_theme'] == 'dark' ? 'selected' : '' %>>Dark Mode</option>
             </select>
           </div>
+          </details>
 
-          <h3>PWA Settings</h3>
+          <details class="customization-section">
+            <summary>Publishing</summary>
           <div class="form-group">
             <label>App Name</label>
             <input type="text" id="manifest-name" value="<%= h(@desktop['manifest_name'] || @desktop['name']) %>" onchange="updateDesktop()">
@@ -124,6 +159,7 @@
             <label>Theme Color</label>
             <input type="color" id="manifest-theme" value="<%= @desktop['manifest_theme_color'] || '#008080' %>" onchange="updateDesktop()">
           </div>
+          </details>
         </div>
 
         <!-- Icons Tab -->
@@ -409,6 +445,9 @@
       taskbar_position: document.getElementById('taskbar-pos').value,
       taskbar_color: document.getElementById('taskbar-color').value,
       window_theme: document.getElementById('window-theme').value,
+      design_concept: document.getElementById('design-concept').value,
+      effects_enabled: document.getElementById('effects-enabled').checked ? '1' : '0',
+      effects_intensity: document.getElementById('effects-intensity').value,
       manifest_name: document.getElementById('manifest-name').value,
       manifest_short_name: document.getElementById('manifest-short').value,
       manifest_theme_color: document.getElementById('manifest-theme').value
@@ -423,6 +462,7 @@
     });
 
     document.getElementById('icon-size-val').textContent = data.icon_size + 'px';
+    document.getElementById('effects-intensity-val').textContent = data.effects_intensity + '%';
   }
 
   function addItem() {

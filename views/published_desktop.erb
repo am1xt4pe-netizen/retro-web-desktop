@@ -39,7 +39,29 @@
       height: 100vh;
       width: 100vw;
       user-select: none;
+      --concept-radius: 14px;
+      --concept-window: #c0c0c0;
+      --concept-surface: #ffffff;
+      --concept-ink: #17130f;
+      --concept-accent: #9b4d24;
+      --concept-border: #3a3226;
+      --concept-shadow: 0 10px 22px rgba(0,0,0,.35);
+      --concept-button-radius: 12px;
+      --effect-opacity: <%= ((@desktop['effects_intensity'] || 60).to_f / 100).round(2) %>;
     }
+
+    <% if @desktop['effects_enabled'].to_i == 1 %>
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2000;
+      opacity: calc(var(--effect-opacity) * .35);
+      background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.08) 3px 4px);
+      mix-blend-mode: screen;
+    }
+    <% end %>
 
     .desktop {
       position: relative;
@@ -145,13 +167,14 @@
     /* Window styles */
     .window {
       position: absolute;
-      background: <%= @desktop['window_theme'] == 'dark' ? '#333' : '#c0c0c0' %>;
-      border: 2px outset;
+      background: var(--concept-window);
+      border: 2px solid var(--concept-border);
+      border-radius: var(--concept-radius);
       min-width: 200px;
       min-height: 150px;
       display: none;
       flex-direction: column;
-      box-shadow: 4px 4px 8px rgba(0,0,0,0.3);
+      box-shadow: var(--concept-shadow);
       z-index: 100;
     }
 
@@ -160,9 +183,10 @@
     }
 
     .window-titlebar {
-      background: <%= @desktop['window_theme'] == 'modern' ? '#0078d7' : (@desktop['window_theme'] == 'dark' ? '#444' : '#000080') %>;
-      color: white;
-      padding: 2px 4px;
+      background: var(--concept-accent);
+      color: var(--concept-button-ink, #fff4df);
+      padding: 10px 14px;
+      border-radius: calc(var(--concept-radius) - 2px) calc(var(--concept-radius) - 2px) 0 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -180,24 +204,26 @@
     }
 
     .window-btn {
-      width: 16px;
-      height: 14px;
-      background: <%= @desktop['window_theme'] == 'dark' ? '#555' : '#c0c0c0' %>;
-      border: 1px outset;
-      font-size: 10px;
+      width: 24px;
+      height: 22px;
+      background: transparent;
+      border: 1px solid currentColor;
+      border-radius: var(--concept-button-radius);
+      font-size: 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: black;
+      color: inherit;
     }
 
     .window-content {
       flex: 1;
       padding: 8px;
       overflow: auto;
-      background: <%= @desktop['window_theme'] == 'dark' ? '#222' : 'white' %>;
-      color: <%= @desktop['window_theme'] == 'dark' ? '#eee' : 'black' %>;
+      background: var(--concept-surface);
+      color: var(--concept-ink);
+      border-radius: 0 0 var(--concept-radius) var(--concept-radius);
     }
 
     /* Gallery styles */
@@ -232,6 +258,55 @@
       width: 100%;
       height: 400px;
       border: 2px inset;
+    }
+
+    /* Ten object languages from the desktop art direction guide. */
+    body[data-concept="1"] { --concept-window:#c98a4f; --concept-surface:#3a2412; --concept-ink:#e7c495; --concept-accent:#e7c495; --concept-border:#2a1808; --concept-radius:75px; --concept-button-radius:20px; --concept-shadow:0 10px 22px rgba(0,0,0,.4); }
+    body[data-concept="2"] { --concept-window:#0a1f0c; --concept-surface:#061408; --concept-ink:#6dff6a; --concept-accent:#173d18; --concept-border:#3f8f3a; --concept-radius:50%; --concept-button-radius:16px; --concept-shadow:0 0 30px rgba(72,255,90,.25); }
+    body[data-concept="3"] { --concept-window:#f7f1de; --concept-surface:#dfd2ab; --concept-ink:#3a2c14; --concept-accent:#c94f2e; --concept-border:#3a2c14; --concept-radius:52px; --concept-button-radius:8px; --concept-shadow:6px 8px 0 #3a2c14; }
+    body[data-concept="4"] { --concept-window:#f2e3c0; --concept-surface:#f2e3c0; --concept-ink:#4a3419; --concept-accent:#a85f2c; --concept-border:#4a3419; --concept-radius:105px 105px 14px 14px; --concept-button-radius:6px 6px 16px 16px; }
+    body[data-concept="5"] { --concept-window:#e6497a; --concept-surface:#7d2ba0; --concept-ink:#fbe4ee; --concept-accent:#e6497a; --concept-border:#e6497a; --concept-radius:52% 48% 44% 56%; --concept-button-radius:50%; --concept-shadow:0 0 40px rgba(230,73,122,.35); }
+    body[data-concept="6"] { --concept-window:#4b3220; --concept-surface:#2e2119; --concept-ink:#e7d9ae; --concept-accent:#914323; --concept-border:#914323; --concept-radius:20px 20px 20px 90px; --concept-button-radius:20px; }
+    body[data-concept="7"] { --concept-window:#0f2621; --concept-surface:#0f2621; --concept-ink:#e8a53d; --concept-accent:#e8a53d; --concept-border:#e8a53d; --concept-radius:14px; --concept-button-radius:40px 40px 4px 4px; }
+    body[data-concept="8"] { --concept-window:#e7d5a3; --concept-surface:#f6e6bf; --concept-ink:#5a3519; --concept-accent:#b28a43; --concept-border:#b28a43; --concept-radius:50%; --concept-button-radius:14px; --concept-shadow:0 8px 20px rgba(0,0,0,.5); }
+    body[data-concept="9"] { --concept-window:#eadcae; --concept-surface:#eadcae; --concept-ink:#1e2922; --concept-accent:#c18a13; --concept-border:#c18a13; --concept-radius:50%; --concept-button-radius:16px; }
+    body[data-concept="10"] { --concept-window:#31483e; --concept-surface:#31483e; --concept-ink:#d2d5b5; --concept-accent:#d2d5b5; --concept-border:#4d6a5e; --concept-radius:70px; --concept-button-radius:30px; --concept-shadow:5px 6px 0 rgba(29,50,44,.3); }
+
+    .window-btn:hover,
+    .taskbar .start-btn:hover,
+    .context-menu-item:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+
+    .taskbar {
+      background: var(--concept-window);
+      color: var(--concept-ink);
+      border-top: 1px solid var(--concept-border);
+    }
+
+    .taskbar .start-btn {
+      background: var(--concept-accent);
+      color: var(--concept-button-ink, #fff4df);
+      border: 1px solid var(--concept-border);
+      border-radius: var(--concept-button-radius);
+    }
+
+    .taskbar-clock {
+      border: 1px solid var(--concept-border);
+      border-radius: var(--concept-button-radius);
+      background: var(--concept-surface);
+      color: var(--concept-ink);
+    }
+
+    .window-content button,
+    .window-content .btn {
+      border-radius: var(--concept-button-radius);
+      border: 1px solid var(--concept-border);
+      background: var(--concept-accent);
+      color: var(--concept-button-ink, #fff4df);
+      padding: 8px 14px;
+      cursor: pointer;
     }
 
     /* Context menu */
@@ -305,7 +380,7 @@
     <%= @desktop['custom_css'] %>
   </style>
 </head>
-<body>
+<body data-concept="<%= @desktop['design_concept'].to_i.between?(1, 10) ? @desktop['design_concept'].to_i : 1 %>">
   <div class="desktop" id="desktop">
     <% @items.select { |item| item['parent_item_id'].nil? }.each do |item| %>
       <div class="desktop-icon"

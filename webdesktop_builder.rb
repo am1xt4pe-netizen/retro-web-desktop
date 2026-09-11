@@ -74,6 +74,9 @@ def init_database
       taskbar_position TEXT DEFAULT 'bottom',
       taskbar_color TEXT DEFAULT '#c0c0c0',
       window_theme TEXT DEFAULT 'classic',
+      design_concept INTEGER DEFAULT 1,
+      effects_enabled INTEGER DEFAULT 1,
+      effects_intensity INTEGER DEFAULT 60,
       custom_css TEXT,
       manifest_name TEXT,
       manifest_short_name TEXT,
@@ -164,6 +167,10 @@ def init_database
   db.execute('ALTER TABLE gallery_images ADD COLUMN source_url TEXT') unless gallery_columns.include?('source_url')
   item_columns = db.execute('PRAGMA table_info(desktop_items)').map { |column| column['name'] }
   db.execute('ALTER TABLE desktop_items ADD COLUMN parent_item_id INTEGER') unless item_columns.include?('parent_item_id')
+  desktop_columns = db.execute('PRAGMA table_info(desktops)').map { |column| column['name'] }
+  db.execute('ALTER TABLE desktops ADD COLUMN design_concept INTEGER DEFAULT 1') unless desktop_columns.include?('design_concept')
+  db.execute('ALTER TABLE desktops ADD COLUMN effects_enabled INTEGER DEFAULT 1') unless desktop_columns.include?('effects_enabled')
+  db.execute('ALTER TABLE desktops ADD COLUMN effects_intensity INTEGER DEFAULT 60') unless desktop_columns.include?('effects_intensity')
 
   seed_default_data
 end
@@ -515,6 +522,7 @@ post '/api/desktop/:id/update' do
     'background_color', 'background_image', 'background_repeat',
     'background_size', 'wallpaper_style', 'font_family', 'icon_size',
     'grid_size', 'taskbar_position', 'taskbar_color', 'window_theme',
+    'design_concept', 'effects_enabled', 'effects_intensity',
     'custom_css', 'manifest_name', 'manifest_short_name',
     'manifest_theme_color', 'manifest_background_color'
   ]

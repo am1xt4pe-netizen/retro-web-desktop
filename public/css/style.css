@@ -1372,6 +1372,65 @@ body[data-theme="theme-10"] {
   background: #c5bea2;
 }
 
+.customization-intro {
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 45%, transparent);
+  border-radius: calc(var(--theme-radius) + 8px);
+  background: color-mix(in srgb, var(--theme-accent) 9%, transparent);
+}
+
+.customization-intro .eyebrow {
+  color: var(--theme-accent);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.customization-intro h2 {
+  margin: 4px 0;
+  color: var(--theme-ink);
+  font-size: 1.25rem;
+}
+
+.customization-intro p,
+.customization-section small {
+  color: color-mix(in srgb, var(--theme-ink) 70%, transparent);
+  line-height: 1.45;
+}
+
+.customization-section {
+  margin: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--theme-accent) 22%, transparent);
+}
+
+.customization-section summary {
+  padding: 12px 0;
+  color: var(--theme-accent-dark);
+  cursor: pointer;
+  font-weight: 700;
+  list-style-position: inside;
+}
+
+.toggle-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 14px;
+  color: var(--theme-ink);
+  font-size: .85rem;
+}
+
+.toggle-control input {
+  accent-color: var(--theme-accent);
+}
+
+.effect-control output {
+  float: right;
+  color: var(--theme-accent);
+  font-weight: 700;
+}
+
 body[data-theme] .feature,
 body[data-theme] .auth-box,
 body[data-theme] .desktop-card,
