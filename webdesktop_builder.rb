@@ -12,6 +12,8 @@ require 'securerandom'
 require 'base64'
 require 'uri'
 require 'rack/utils'
+require 'tempfile'
+require 'zip'
 
 # ============================================================================
 # CONFIGURATION
@@ -45,6 +47,32 @@ def db
     conn.execute('PRAGMA foreign_keys = ON')
     conn.busy_timeout = 5000 # wait up to 5s instead of raising "database is locked"
     conn
+  end
+end
+
+def ensure_flashcard_tools
+  db.execute("SELECT id FROM desktops").each do |desktop|
+    next if db.execute(
+      "SELECT id FROM desktop_items WHERE desktop_id = ? AND item_type = 'flashcards'",
+      [desktop['id']]
+    ).any?
+
+    index = db.execute(
+      "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM desktop_items WHERE desktop_id = ?",
+      [desktop['id']]
+    ).first['next_order']
+    x = 20
+    y = 180
+    while db.execute(
+      "SELECT id FROM desktop_items WHERE desktop_id = ? AND x_position = ? AND y_position = ? AND parent_item_id IS NULL",
+      [desktop['id'], x, y]
+    ).any?
+      y += 80
+    end
+    db.execute(
+      "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, sort_order) VALUES (?, 'flashcards', 'Flash Cards', 'text', ?, ?, ?)",
+      [desktop['id'], x, y, index]
+    )
   end
 end
 
@@ -193,6 +221,7 @@ def init_database
   db.execute('ALTER TABLE desktops ADD COLUMN effects_intensity INTEGER DEFAULT 60') unless desktop_columns.include?('effects_intensity')
 
   seed_default_data
+  ensure_flashcard_tools
 end
 
 def seed_default_data
@@ -503,11 +532,13 @@ post '/desktop/new' do
   default_items = [
     ['folder', 'My Documents', 'folder', 20, 20],
     ['write', 'Write', 'note', 20, 100],
-    ['link', 'My Links', 'link', 20, 180],
-    ['gallery', 'My Photos', 'gallery', 20, 260],
-    ['game', 'Retro Games', 'retro_game', 20, 340],
-    ['link', 'Chord Lab', 'link', 20, 420],
-    ['link', 'Guitar Library', 'link', 20, 500]
+    ['flashcards', 'Flash Cards', 'text', 20, 180],
+    ['link', 'My Links', 'link', 20, 260],
+    ['gallery', 'My Photos', 'gallery', 20, 340],
+    ['game', 'Retro Games', 'retro_game', 20, 420],
+    ['link', 'Chord Lab', 'link', 20, 500],
+    ['link', 'Guitar Library', 'link', 20, 580],
+    ['link', 'Guitar Library', 'link', 20, 580]
   ]
 
   default_items.each_with_index do |item, i|
@@ -516,6 +547,7 @@ post '/desktop/new' do
       [desktop_id, item[0], item[1], item[2], item[3], item[4], item[1] == 'Chord Lab' ? '/tools/chord_lab.html' : (item[1] == 'Guitar Library' ? '/tools/classical_guitar_library.html' : nil), i]
     )
   end
+
   db.execute(
     "INSERT INTO text_documents (desktop_id, title, content) VALUES (?, ?, ?)",
     [desktop_id, 'Welcome to Write', '<p>Start typing your first document.</p>']
@@ -917,6 +949,69 @@ post '/api/desktop/:id/flashcard-set' do
   { success: true }.to_json
 rescue JSON::ParserError
   halt 400, { success: false, error: 'The pasted card data could not be read.' }.to_json
+end
+
+post '/api/desktop/:id/flashcard-import' do
+  require_login
+  desktop = require_desktop_owner(params[:id].to_i)
+  upload = params[:deck]
+  halt 400, { success: false, error: 'Choose an Anki .apkg file.' }.to_json unless upload && upload[:tempfile]
+
+  tempfile = Tempfile.new(['anki-import-', '.anki2'])
+  begin
+    entry = nil
+    Zip::File.open(upload[:tempfile].path) do |archive|
+      entry = archive.find_entry('collection.anki2')
+      halt 400, { success: false, error: 'This does not look like a valid Anki deck.' }.to_json unless entry
+      entry.get_input_stream do |stream|
+        tempfile.binmode
+        while (chunk = stream.read(1024 * 1024))
+          tempfile.write(chunk)
+        end
+      end
+    end
+    tempfile.close
+
+    anki_db = SQLite3::Database.new(tempfile.path)
+    anki_db.results_as_hash = true
+    decks = {}
+    deck_row = anki_db.execute("SELECT decks FROM col LIMIT 1").first
+    JSON.parse(deck_row['decks']).each { |id, deck| decks[id.to_i] = deck['name'] } if deck_row
+    notes = anki_db.execute("SELECT id, flds FROM notes ORDER BY id LIMIT 500")
+    cards = notes.map do |note|
+      fields = note['flds'].to_s.split("\u001f", -1)
+      { front: fields[0].to_s.strip, back: fields[1..]&.join("\n").to_s.strip }
+    end.select { |card| !card[:front].empty? && !card[:back].empty? }
+    halt 400, { success: false, error: 'No two-sided cards were found in this Anki deck.' }.to_json if cards.empty?
+
+    deck_name = decks.values.compact.first
+    set_name = params[:name].to_s.strip
+    set_name = deck_name.to_s.strip if set_name.empty?
+    set_name = File.basename(upload[:filename].to_s, '.*').strip if set_name.empty?
+    set_name = 'Imported Anki Deck' if set_name.empty?
+
+    db.transaction do
+      db.execute(
+        "INSERT INTO flashcard_sets (desktop_id, name, description) VALUES (?, ?, ?)",
+        [desktop['id'], set_name, 'Imported from Anki']
+      )
+      set_id = db.last_insert_row_id
+      cards.each_with_index do |card, index|
+        db.execute(
+          "INSERT INTO flashcards (set_id, front, back, sort_order) VALUES (?, ?, ?, ?)",
+          [set_id, card[:front], card[:back], index]
+        )
+      end
+    end
+    content_type :json
+    { success: true, count: cards.length }.to_json
+  ensure
+    anki_db&.close
+    tempfile.close unless tempfile.closed?
+    tempfile.unlink
+  end
+rescue SQLite3::Exception, Zip::Error, JSON::ParserError => error
+  halt 400, { success: false, error: "Could not import this Anki deck: #{error.message}" }.to_json
 end
 
 post '/api/desktop/:id/flashcard-set/:set_id/card' do

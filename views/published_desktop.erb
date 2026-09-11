@@ -791,10 +791,15 @@
               <textarea class="flashcard-input" id="flashcard-back" rows="3" placeholder="Back: definition, answer, or explanation"></textarea>
             </div>
             <div id="flashcard-bulk-fields" style="display:none;">
-              <textarea class="flashcard-input" id="flashcard-bulk" rows="7" placeholder="Paste two-column rows from a spreadsheet&#10;term<TAB>definition&#10;mitosis<TAB>cell division"></textarea>
-              <small class="flashcard-hint">Use tabs between columns and one card per line. Commas also work.</small>
+              <textarea class="flashcard-input" id="flashcard-bulk" rows="7" placeholder="Paste an Anki text export or spreadsheet rows&#10;term<TAB>definition&#10;mitosis<TAB>cell division"></textarea>
+              <small class="flashcard-hint">Anki: export as “Notes in Plain Text” and paste it here. Tabs separate the front and back.</small>
             </div>
             <button class="flashcard-button flashcard-create" onclick="createFlashcardSet()">CREATE SET</button>
+            <label class="flashcard-upload">
+              <span>Or import an Anki deck (.apkg)</span>
+              <input type="file" id="flashcard-apkg" accept=".apkg,application/zip">
+            </label>
+            <button class="flashcard-button flashcard-create" onclick="importAnkiDeck()">IMPORT ANKI DECK</button>
             <div class="flashcard-status" id="flashcard-status" aria-live="polite"></div>
           </details>
         </div>
@@ -870,6 +875,25 @@
         status.textContent = 'Set created. Refreshing cards…';
         location.reload();
       }).catch(error => { status.textContent = error.message; });
+    }
+
+    function importAnkiDeck() {
+      const file = document.getElementById('flashcard-apkg').files[0];
+      const name = document.getElementById('flashcard-set-name').value.trim();
+      const status = document.getElementById('flashcard-status');
+      if (!file) { status.textContent = 'Choose an .apkg file first.'; return; }
+      const form = new FormData();
+      form.append('deck', file);
+      form.append('name', name);
+      status.textContent = 'Importing deck…';
+      fetch(`/api/desktop/${desktopId}/flashcard-import`, { method: 'POST', body: form })
+        .then(async response => {
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Could not import deck.');
+          status.textContent = `Imported ${result.count} cards. Refreshing…`;
+          location.reload();
+        })
+        .catch(error => { status.textContent = error.message; });
     }
 
     function closeWindow(id) {
