@@ -538,13 +538,14 @@ post '/desktop/new' do
     ['game', 'Retro Games', 'retro_game', 20, 420],
     ['link', 'Chord Lab', 'link', 20, 500],
     ['link', 'Guitar Library', 'link', 20, 580],
-    ['link', 'Guitar Library', 'link', 20, 580]
+    ['link', 'Guitar Library', 'link', 20, 580],
+    ['link', 'Scale Machine', 'link', 20, 660]
   ]
 
   default_items.each_with_index do |item, i|
     db.execute(
       "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [desktop_id, item[0], item[1], item[2], item[3], item[4], item[1] == 'Chord Lab' ? '/tools/chord_lab.html' : (item[1] == 'Guitar Library' ? '/tools/classical_guitar_library.html' : nil), i]
+      [desktop_id, item[0], item[1], item[2], item[3], item[4], item[1] == 'Chord Lab' ? '/tools/chord_lab.html' : (item[1] == 'Guitar Library' ? '/tools/classical_guitar_library.html' : (item[1] == 'Scale Machine' ? '/tools/global_scales_visualizer.html' : nil)), i]
     )
   end
 

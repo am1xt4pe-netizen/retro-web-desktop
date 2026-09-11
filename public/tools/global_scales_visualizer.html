@@ -763,4 +763,196 @@
 
             return Object.values(approxMap).some(v => v.isApprox);
         }
-<!--SGMAPPEND-->
+
+        //////////////////////////////////////////////////////////
+        // OUD RENDER (geometrically-spaced, true quarter-tones)
+        //////////////////////////////////////////////////////////
+        function xPos(pos, edo, L){
+            return L * (1 - Math.pow(2, -pos / edo));
+        }
+
+        function buildOud(cfg, scale){
+            oudBoardEl.innerHTML = '';
+            const L = cfg.scaleLength;
+            const edo = cfg.edo;
+            const boardWidth = Math.ceil(xPos(cfg.totalPositions, edo, L)) + 60;
+            oudBoardEl.style.width = boardWidth + 'px';
+
+            const rootIndex = cfg.notesMaster.indexOf(rootSelect.value);
+            const numStrings = cfg.tuning.length;
+            const rowHeight = 240 / (numStrings + 1);
+
+            cfg.tuning.forEach((openNote, stringIdx) => {
+                const y = rowHeight * (stringIdx + 1);
+                const lineEl = document.createElement('div');
+                lineEl.className = 'oud-string-line';
+                lineEl.style.top = y + 'px';
+                oudBoardEl.appendChild(lineEl);
+            });
+
+            const nut = document.createElement('div');
+            nut.className = 'oud-nut';
+            oudBoardEl.appendChild(nut);
+
+            for (let pos = 1; pos <= cfg.totalPositions; pos++){
+                if (pos % 2 !== 0) continue;
+                const x = xPos(pos, edo, L);
+                const isOctave = (pos === edo || pos === edo * 2);
+
+                const tick = document.createElement('div');
+                tick.className = 'oud-tick' + (isOctave ? ' octave' : '');
+                tick.style.left = x + 'px';
+                oudBoardEl.appendChild(tick);
+
+                const num = document.createElement('div');
+                num.className = 'oud-num';
+                num.style.left = x + 'px';
+                num.textContent = String(pos / 2);
+                oudBoardEl.appendChild(num);
+            }
+            const zeroLabel = document.createElement('div');
+            zeroLabel.className = 'oud-num zero';
+            zeroLabel.textContent = 'OPEN';
+            oudBoardEl.appendChild(zeroLabel);
+
+            cfg.tuning.forEach((openNote, stringIdx) => {
+                const y = rowHeight * (stringIdx + 1);
+                const openNoteIndex = cfg.notesMaster.indexOf(openNote);
+
+                for (let pos = 0; pos <= cfg.totalPositions; pos++){
+                    const noteIndex = (openNoteIndex + pos) % edo;
+                    const interval = (noteIndex - rootIndex + edo) % edo;
+                    if (!scale.intervals.includes(interval)) continue;
+
+                    const noteName = cfg.notesMaster[noteIndex];
+                    const isMicro = (interval % 2 !== 0);
+                    const isRoot = (interval === 0);
+
+                    const noteEl = document.createElement('div');
+                    noteEl.className = 'note oud-note active-scale' + (isMicro ? ' micro' : '') + (isRoot ? ' is-root' : '');
+                    noteEl.style.left = xPos(pos, edo, L) + 'px';
+                    noteEl.style.top = y + 'px';
+                    noteEl.title = rootLabel24(noteName);
+                    noteEl.textContent = (isMicro ? '~' : '') + noteName.replace('+','');
+
+                    oudBoardEl.appendChild(noteEl);
+                }
+            });
+
+            return scale.intervals.some(i => i % 2 !== 0);
+        }
+
+        //////////////////////////////////////////////////////////
+        // MAIN RENDER
+        //////////////////////////////////////////////////////////
+        function updateInfoPanel(cfg, scale, hasMicro){
+            const rootNote = rootSelect.value;
+            const rootIndex24 = to24Index(rootNote, cfg.edo);
+            const noteNames = scale.intervals.map(i => {
+                const idx24 = (rootIndex24 + i) % 24;
+                const name24 = NOTE_24[idx24];
+                if (cfg.edo === 24) return rootLabel24(name24);
+                const semitoneName = fromIndex24(idx24, 12);
+                if (i % 2 === 0) return semitoneName;
+                const trueCents = i * 50;
+                const shownCents = Math.round(i / 2) * 100;
+                const arrow = trueCents < shownCents ? '↓' : '↑';
+                return semitoneName + arrow;
+            });
+            const rootDisplay = cfg.edo === 24 ? rootLabel24(rootNote) : rootNote;
+            let html = `<strong>Info:</strong> ${scale.desc}<br><strong>Notes in ${rootDisplay}:</strong> ${noteNames.join(' – ')}`;
+            if (hasMicro){
+                html += cfg.edo === 24
+                    ? `<span class="info-note">↓/↑ marks a true quarter-tone degree (24-EDO). Real maqam/dastgah intonation varies by performer and tradition.</span>`
+                    : `<span class="info-note">↓ (or ↑) after a note means that degree is actually a quarter-tone in this scale — the arrow shows which way the true pitch sits relative to the fret shown. Switch to Oud mode to see it at true pitch and position.</span>`;
+            }
+            const positions = scale.dronePositions || [];
+            if (positions.length === 1 && positions[0].interval !== 0){
+                html += `<span class="info-note">Idiomatic drone/pedal: ${positions[0].label}</span>`;
+            } else if (positions.length > 1){
+                html += `<span class="info-note">This scale has <strong>two</strong> idiomatic drone/pedal positions: (A) ${positions[0].label}; (B) ${positions[1].label}. Use the Ghammaz Option dropdown once a drone note is locked.</span>`;
+            }
+            infoPanel.innerHTML = html;
+        }
+
+        function render(){
+            const cfg = instruments[currentKey];
+            const scale = scalesData[scaleSelect.value];
+            let hasMicro;
+
+            if (currentKey === 'guitar'){
+                fretboardEl.style.display = '';
+                fretNumbersEl.style.display = '';
+                oudBoardEl.style.display = 'none';
+                hasMicro = buildGuitar(cfg, scale);
+            } else {
+                fretboardEl.style.display = 'none';
+                fretNumbersEl.style.display = 'none';
+                oudBoardEl.style.display = '';
+                hasMicro = buildOud(cfg, scale);
+            }
+            updateInfoPanel(cfg, scale, hasMicro);
+        }
+
+        function setInstrument(key){
+            const prevCfg = instruments[currentKey];
+            const prevRoot = rootSelect.value;
+            const prevDrone = droneSelect.value;
+            currentKey = key;
+            const cfg = instruments[key];
+
+            populateScaleOptions();
+            const scale = scalesData[scaleSelect.value];
+
+            const translatedDrone = prevDrone ? translateRoot(prevDrone, prevCfg.edo, cfg.edo) : "";
+            populateDroneOptions(cfg, translatedDrone);
+            refreshGhammazOptions(scale);
+
+            const desiredRoot = prevRoot ? translateRoot(prevRoot, prevCfg.edo, cfg.edo) : cfg.defaultRoot;
+            populateRootOptions(cfg, desiredRoot);
+
+            applyDroneLock(cfg, scale); // overrides the above if a drone is locked
+
+            btnGuitar.classList.toggle('active', key === 'guitar');
+            btnOud.classList.toggle('active', key === 'oud');
+            render();
+        }
+
+        scaleSelect.addEventListener('change', () => {
+            const cfg = instruments[currentKey];
+            const scale = scalesData[scaleSelect.value];
+            refreshGhammazOptions(scale);
+            applyDroneLock(cfg, scale); // only moves root if a drone is locked; otherwise root stays put
+            render();
+        });
+
+        rootSelect.addEventListener('change', render);
+
+        droneSelect.addEventListener('change', () => {
+            const cfg = instruments[currentKey];
+            const scale = scalesData[scaleSelect.value];
+            droneOptionIndex = 0;
+            refreshGhammazOptions(scale);
+            applyDroneLock(cfg, scale);
+            render();
+        });
+
+        droneOptionSelect.addEventListener('change', () => {
+            const cfg = instruments[currentKey];
+            const scale = scalesData[scaleSelect.value];
+            droneOptionIndex = parseInt(droneOptionSelect.value, 10);
+            applyDroneLock(cfg, scale);
+            render();
+        });
+
+        btnGuitar.addEventListener('click', () => setInstrument('guitar'));
+        btnOud.addEventListener('click', () => setInstrument('oud'));
+
+        // init
+        populateScaleOptions();
+        populateRootOptions(instruments.guitar, instruments.guitar.defaultRoot);
+        populateDroneOptions(instruments.guitar);
+        render();
+    </script>
+</body>
+</html>
