@@ -464,13 +464,15 @@ post '/desktop/new' do
     ['write', 'Write', 'note', 20, 100],
     ['link', 'My Links', 'link', 20, 180],
     ['gallery', 'My Photos', 'gallery', 20, 260],
-    ['game', 'Retro Games', 'retro_game', 20, 340]
+    ['game', 'Retro Games', 'retro_game', 20, 340],
+    ['link', 'Chord Lab', 'link', 20, 420],
+    ['link', 'Guitar Library', 'link', 20, 500]
   ]
 
   default_items.each_with_index do |item, i|
     db.execute(
-      "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [desktop_id, item[0], item[1], item[2], item[3], item[4], i]
+      "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [desktop_id, item[0], item[1], item[2], item[3], item[4], item[1] == 'Chord Lab' ? '/tools/chord_lab.html' : (item[1] == 'Guitar Library' ? '/tools/classical_guitar_library.html' : nil), i]
     )
   end
   db.execute(

@@ -14,9 +14,11 @@
 
     body {
       font-family: <%= @desktop['font_family'] || 'Tahoma, sans-serif' %>;
-      background-color: <%= @desktop['background_color'] || '#008080' %>;
-      <% if @desktop['background_image'] && !@desktop['background_image'].to_s.empty? %>
-      background-image: url('<%= @desktop['background_image'] %>');
+      <% export_bg = @export_bg_image || @desktop['background_image'] %>
+      <% bg_props = background_image_props(export_bg) %>
+      background-color: <%= bg_props['color'] || @desktop['background_color'] || '#008080' %>;
+      <% if bg_props['image'] %>
+      background-image: <%= bg_props['image'] %>;
       background-repeat: <%= @desktop['background_repeat'] || 'no-repeat' %>;
       background-size: <%= @desktop['background_size'] || 'cover' %>;
       <% if @desktop['wallpaper_style'] == 'tile' %>

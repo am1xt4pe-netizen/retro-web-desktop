@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CLASSICAL GUITAR LIBRARY — CLASSTAB ARCHIVE</title>
+
+<style>
+html,body{
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  background:#050509;
+}
+</style>
+
+</head>
+
+<body>
+
+<div id="cglApp">
+
+<style>
+#cglApp{
+  --cyan:#00fff7;
+  --pink:#ff00cc;
+  --green:#39ff14;
+  --yellow:#ffe600;
+  --bg:#050509;
+  --panel:#0b0b12;
+  --panel2:#10101a;
+  --text:#e9ffff;
+  --muted:#789090;
+
+  width:100%;
+  height:100%;
+  min-height:0;
+  color:var(--text);
+  background:var(--bg);
+  font-family:"Courier New",Courier,monospace;
+  overflow:hidden;
+}
+
+#cglApp *{box-sizing:border-box}
+
+.cgl{
+  height:100%;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+/* HEADER */
+
+.cgl-head{
+  flex:none;
+  padding:12px;
+  border-bottom:1px solid rgba(0,255,247,.25);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0,255,247,.07),
+      transparent 50%,
+      rgba(255,0,204,.06)
+    );
+}
+
+.cgl-title{
+  margin:0;
+  color:var(--cyan);
+  font-size:20px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  text-shadow:0 0 10px rgba(0,255,247,.35);
+}
+
+.cgl-sub{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:10px;
+  letter-spacing:.1em;
+}
+
+/* FILTERS */
+
+.cgl-filters{
+  flex:none;
+  display:grid;
+  grid-template-columns:
+    repeat(4,minmax(0,1fr))
+    auto
+    auto;
+  gap:6px;
+  padding:8px;
+  border-bottom:1px solid rgba(0,255,247,.15);
+  background:#08080d;
+}
+
+.cgl select,
+.cgl button{
+  font-family:inherit;
+  font-size:11px;
+}
+
+.cgl select{
+  min-width:0;
+  padding:8px;
+  color:var(--cyan);
+  background:#050509;
+  border:1px solid rgba(0,255,247,.3);
+  border-radius:2px;
+}
+
+.cgl button{
+  padding:8px 11px;
+  color:var(--cyan);
+  background:#07070c;
+  border:1px solid rgba(0,255,247,.35);
+  border-radius:2px;
+  cursor:pointer;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+.cgl button:hover{
+  color:#000;
+  background:var(--cyan);
+}
+
+.cgl button.random{
+  color:var(--pink);
+  border-color:rgba(255,0,204,.4);
+}
+
+.cgl button.random:hover{
+  color:#000;
+  background:var(--pink);
+}
+
+/* PIECE SELECTOR */
+
+.cgl-piecebar{
+  flex:none;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:6px;
+  padding:8px;
+  border-bottom:1px solid rgba(255,0,204,.18);
+  background:#08080d;
+}
+
+#cglPiece{
+  width:100%;
+  padding:9px;
+  color:white;
+  background:#050509;
+  border:1px solid rgba(255,0,204,.35);
+}
+
+/* MAIN */
+
+.cgl-main{
+  flex:1;
+  min-height:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 270px;
+  gap:8px;
+  padding:8px;
+  overflow:hidden;
+}
+
+/* TAB WINDOW */
+
+.cgl-tabwindow{
+  min-width:0;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  border:1px solid rgba(0,255,247,.3);
+  background:#020204;
+  overflow:hidden;
+}
+
+.cgl-tabhead{
+  flex:none;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  color:var(--cyan);
+  background:#08080d;
+  border-bottom:1px solid rgba(0,255,247,.2);
+  font-size:10px;
+  text-transform:uppercase;
+}
+
+#cglStatus{
+  color:var(--green);
+  white-space:nowrap;
+}
+
+/*
+  THIS IS THE IMPORTANT PART.
+
+  We display the actual Classtab TXT file.
+  The browser renders it as plain text in the iframe.
+*/
+
+.cgl-framewrap{
+  position:relative;
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  background:#fff;
+}
+
+#cglFrame{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:400px;
+  border:0;
+  background:#fff;
+}
+
+/* FALLBACK */
+
+.cgl-fallback{
+  display:none;
+  position:absolute;
+  inset:0;
+  align-items:center;
+  justify-content:center;
+  padding:25px;
+  background:#050509;
+}
+
+.cgl-fallback.show{
+  display:flex;
+}
+
+.cgl-fallback-box{
+  max-width:550px;
+  padding:25px;
+  text-align:center;
+  background:#09090f;
+  border:1px solid rgba(0,255,247,.3);
+}
+
+.cgl-fallback-box h2{
+  margin:0 0 12px;
+  color:var(--cyan);
+}
+
+.cgl-fallback-box p{
+  color:#9eb0b0;
+  line-height:1.5;
+}
+
+.cgl-open{
+  display:inline-block;
+  margin-top:15px;
+  padding:10px 15px;
+  color:#000;
+  background:var(--cyan);
+  text-decoration:none;
+  font-weight:bold;
+}
+
+/* INFO */
+
+.cgl-info{
+  min-width:0;
+  min-height:0;
+  overflow-y:auto;
+}
+
+.cgl-card{
+  margin-bottom:8px;
+  padding:11px;
+  background:#09090f;
+  border:1px solid rgba(0,255,247,.2);
+}
+
+.cgl-label{
+  margin-bottom:7px;
+  color:var(--cyan);
+  font-size:9px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.cgl-piece-title{
+  margin:0;
+  color:white;
+  font-size:15px;
+  line-height:1.3;
+}
+
+.cgl-composer{
+  margin-top:6px;
+  color:var(--pink);
+  font-size:11px;
+}
+
+.cgl-meta{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+  margin-top:10px;
+}
+
+.cgl-meta div{
+  padding:7px;
+  background:#050509;
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.cgl-meta small{
+  display:block;
+  color:#657878;
+  font-size:8px;
+  text-transform:uppercase;
+}
+
+.cgl-meta span{
+  display:block;
+  margin-top:3px;
+  color:#ddd;
+  font-size:10px;
+}
+
+.cgl-description{
+  color:#9eb0b0;
+  font-size:10px;
+  line-height:1.55;
+}
+
+.cgl-link{
+  display:block;
+  margin-top:6px;
+  padding:8px;
+  color:var(--cyan);
+  background:#050509;
+  border:1px solid rgba(0,255,247,.18);
+  text-decoration:none;
+  font-size:10px;
+}
+
+.cgl-link:hover{
+  color:#000;
+  background:var(--cyan);
+}
+
+/* MOBILE */
+
+@media(max-width:900px){
+
+  .cgl-filters{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .cgl-main{
+    grid-template-columns:1fr;
+    grid-template-rows:minmax(400px,1fr) auto;
+    overflow-y:auto;
+  }
+
+  .cgl-info{
+    overflow:visible;
+  }
+}
+
+@media(max-width:600px){
+
+  .cgl-title{
+    font-size:16px;
+  }
+
+  .cgl-filters{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .cgl-piecebar{
+    grid-template-columns:1fr;
+  }
+
+  .cgl-main{
+    grid-template-rows:minmax(400px,60vh) auto;
+  }
+}
+
+@media(max-width:400px){
+
+  .cgl-filters{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
+
+<div class="cgl">
+
+  <div class="cgl-head">
+    <h1 class="cgl-title">Classical Guitar Library</h1>
+    <div class="cgl-sub">
+      CLASSTAB.ORG / CLASSICAL GUITAR TABLATURE ARCHIVE
+    </div>
+  </div>
+
+
+  <div class="cgl-filters">
+
+    <select id="cglComposer">
+      <option value="">ALL COMPOSERS</option>
+    </select>
+
+    <select id="cglCentury">
+      <option value="">ALL CENTURIES</option>
+    </select>
+
+    <select id="cglPeriod">
+      <option value="">ALL PERIODS</option>
+    </select>
+
+    <select id="cglType">
+      <option value="">ALL TYPES</option>
+    </select>
+
+    <button id="cglClear">CLEAR</button>
+
+    <button id="cglRandom" class="random">RANDOM</button>
+
+  </div>
+
+
+  <div class="cgl-piecebar">
+
+    <select id="cglPiece"></select>
+
+    <button id="cglOpen">OPEN TAB</button>
+
+    <button id="cglNew" class="random">NEW WINDOW</button>
+
+  </div>
+
+
+  <div class="cgl-main">
+
+
+    <!-- TAB -->
+
+    <section class="cgl-tabwindow">
+
+      <div class="cgl-tabhead">
+
+        <span id="cglViewerTitle">
+          TAB VIEWER
+        </span>
+
+        <span id="cglStatus">
+          READY
+        </span>
+
+      </div>
+
+
+      <div class="cgl-framewrap">
+
+        <iframe
+          id="cglFrame"
+          title="Classical guitar tablature"
+          loading="eager"
+        ></iframe>
+
+
+        <div
+          id="cglFallback"
+          class="cgl-fallback"
+        >
+
+          <div class="cgl-fallback-box">
+
+            <h2 id="cglFallbackTitle">
+              TAB
+            </h2>
+
+            <p>
+              This browser will not display the external
+              Classtab text file inside this window.
+            </p>
+
+            <a
+              id="cglFallbackLink"
+              class="cgl-open"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              OPEN CLASSTAB TAB
+            </a>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- INFO -->
+
+    <aside class="cgl-info">
+
+      <div class="cgl-card">
+
+        <div class="cgl-label">
+          SELECTED PIECE
+        </div>
+
+        <h2
+          id="cglTitle"
+          class="cgl-piece-title"
+        >—</h2>
+
+        <div
+          id="cglComposerName"
+          class="cgl-composer"
+        >—</div>
+
+
+        <div class="cgl-meta">
+
+          <div>
+            <small>Century</small>
+            <span id="cglMetaCentury">—</span>
+          </div>
+
+          <div>
+            <small>Period</small>
+            <span id="cglMetaPeriod">—</span>
+          </div>
+
+          <div>
+            <small>Type</small>
+            <span id="cglMetaType">—</span>
+          </div>
+
+          <div>
+            <small>Key</small>
+            <span id="cglMetaKey">—</span>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="cgl-card">
+
+        <div class="cgl-label">
+          ABOUT
+        </div>
+
+        <div
+          id="cglDescription"
+          class="cgl-description"
+        ></div>
+
+      </div>
+
+
+      <div class="cgl-card">
+
+        <div class="cgl-label">
+          LINKS
+        </div>
+
+        <a
+          id="cglDirect"
+          class="cgl-link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ↗ OPEN ORIGINAL TAB
+        </a>
+
+        <a
+          href="https://www.classtab.org/index_old.htm"
+          class="cgl-link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ↗ CLASSTAB ARCHIVE
+        </a>
+
+      </div>
+
+    </aside>
+
+  </div>
+
+</div>
+
+
+<script>
+(() => {
+
+"use strict";
+
+
+/* ==========================================================
+   VERIFIED CLASSTAB DATABASE
+   ==========================================================
+
+   These URLs were taken from the actual hyperlinks in
+   Classtab's current index rather than guessed from names.
+   ========================================================== */
+
+const pieces = [
+
+  {
+    title:"BWV 996 — Bourrée",
+    composer:"Johann Sebastian Bach",
+    century:"18th",
+    period:"Baroque",
+    type:"Dance",
+    key:"E minor",
+    url:"https://www.classtab.org/bach_js_bwv0996_lute_suite_in_em_5_bourree.txt",
+    description:
+      "Bourrée from Bach's Lute Suite No. 1 in E minor, BWV 996."
+  },
+
+  {
+    title:"BWV 996 — Prelude",
+    composer:"Johann Sebastian Bach",
+    century:"18th",
+    period:"Baroque",
+    type:"Prelude",
+    key:"E minor",
+    url:"https://www.classtab.org/bach_js_bwv0996_lute_suite_in_em_1_praludium.txt",
+    description:
+      "Prelude from Bach's Lute Suite No. 1 in E minor, BWV 996."
+  },
+
+  {
+    title:"BWV 999 — Prelude",
+    composer:"Johann Sebastian Bach",
+    century:"18th",
+    period:"Baroque",
+    type:"Prelude",
+    key:"C minor / D minor guitar version",
+    url:"https://www.classtab.org/bach_js_bwv0999_prelude_in_cm_for_lute.txt",
+    description:
+      "Bach's Prelude BWV 999. The original is in C minor; Classtab includes a commonly used D-minor guitar version."
+  },
+
+  {
+    title:"BWV 846 — Prelude in C",
+    composer:"Johann Sebastian Bach",
+    century:"18th",
+    period:"Baroque",
+    type:"Prelude",
+    key:"C major",
+    url:"https://www.classtab.org/bach_js_bwv0846_1_wtc1_no01_prelude_in_c.txt",
+    description:
+      "Prelude No. 1 from Book I of The Well-Tempered Clavier."
+  },
+
+  {
+    title:"Recuerdos de la Alhambra",
+    composer:"Francisco Tárrega",
+    century:"19th",
+    period:"Romantic",
+    type:"Tremolo",
+    key:"A minor",
+    url:"https://www.classtab.org/tarrega_recuerdos_de_la_alhambra.txt",
+    description:
+      "Tárrega's celebrated tremolo work and one of the defining pieces of the classical guitar repertoire."
+  },
+
+  {
+    title:"Lágrima",
+    composer:"Francisco Tárrega",
+    century:"19th",
+    period:"Romantic",
+    type:"Prelude",
+    key:"E major / E minor",
+    url:"https://www.classtab.org/tarrega_lagrima.txt",
+    description:
+      "One of Tárrega's most famous miniatures. Classtab includes multiple versions and fingering information."
+  },
+
+  {
+    title:"Marieta",
+    composer:"Francisco Tárrega",
+    century:"19th",
+    period:"Romantic",
+    type:"Mazurka",
+    key:"A minor / A major",
+    url:"https://www.classtab.org/tarrega_marieta_mazurka.txt",
+    description:
+      "Tárrega's Marieta, a lyrical mazurka in two contrasting sections."
+  },
+
+  {
+    title:"Pavana",
+    composer:"Francisco Tárrega",
+    century:"19th",
+    period:"Romantic",
+    type:"Dance",
+    key:"Unknown",
+    url:"https://www.classtab.org/tarrega_pavana.txt",
+    description:
+      "Tárrega's Renaissance-inspired Pavana."
+  },
+
+  {
+    title:"Prelude to Estudio Brillante",
+    composer:"Francisco Tárrega",
+    century:"19th",
+    period:"Romantic",
+    type:"Prelude",
+    key:"A major",
+    url:"https://www.classtab.org/tarrega_preludio_estudio_brillante.txt",
+    description:
+      "Tárrega's Prelude in A associated with Estudio Brillante."
+  },
+
+  {
+    title:"Asturias (Leyenda)",
+    composer:"Isaac Albéniz",
+    century:"19th",
+    period:"Romantic",
+    type:"Spanish Dance",
+    key:"G minor",
+    url:"https://www.classtab.org/albeniz_isaac_op047_no5_espanola_asturias.txt",
+    description:
+      "Albéniz's famous Asturias from Suite Española, Op. 47 No. 5."
+  },
+
+  {
+    title:"Torre Bermeja",
+    composer:"Isaac Albéniz",
+    century:"19th",
+    period:"Romantic",
+    type:"Serenata",
+    key:"Unknown",
+    url:"https://www.classtab.org/albeniz_isaac_op092_no12_torre_bermeja.txt",
+    description:
+      "Torre Bermeja from Albéniz's Piezas Características, Op. 92."
+  },
+
+  {
+    title:"Op. 35 No. 22 — Allegretto",
+    composer:"Fernando Sor",
+    century:"19th",
+    period:"Classical",
+    type:"Etude",
+    key:"B minor",
+    url:"https://www.classtab.org/sor_op35_no22_allegretto_in_bm.txt",
+    description:
+      "Sor's Op. 35 No. 22, also identified by Classtab as Segovia Study No. 5."
+  },
+
+  {
+    title:"Op. 60 No. 7 — Study",
+    composer:"Matteo Carcassi",
+    century:"19th",
+    period:"Classical",
+    type:"Etude",
+    key:"A minor",
+    url:"https://www.classtab.org/carcassi_op60_no07_study_in_am.txt",
+    description:
+      "Study No. 7 from Carcassi's Op. 60 collection."
+  },
+
+  {
+    title:"Estudio Sencillo No. 11",
+    composer:"Leo Brouwer",
+    century:"20th",
+    period:"Modern",
+    type:"Etude",
+    key:"Unknown",
+    url:"https://www.classtab.org/brouwer_estudios_sencillos_11_allegretto.txt",
+    description:
+      "Brouwer's Estudio Sencillo No. 11, marked Allegretto."
+  },
+
+  {
+    title:"Water Music — Minuet",
+    composer:"George Frideric Handel",
+    century:"18th",
+    period:"Baroque",
+    type:"Dance",
+    key:"D major",
+    url:"https://www.classtab.org/handel_hwv349_water_music_suite_2_in_d_3_minuet.txt",
+    description:
+      "The Minuet from Handel's Water Music Suite No. 2."
+  },
+
+  {
+    title:"Water Music — Allegro",
+    composer:"George Frideric Handel",
+    century:"18th",
+    period:"Baroque",
+    type:"Dance",
+    key:"G minor",
+    url:"https://www.classtab.org/handel_hwv432_vol1_no7_suite_in_gm_3_allegro.txt",
+    description:
+      "Handel's Allegro from Keyboard Suite Vol. 1 No. 7."
+  }
+
+];
+
+
+/* ==========================================================
+   DOM
+   ========================================================== */
+
+const root = document.getElementById("cglApp");
+
+if(!root) return;
+
+const $ = s => root.querySelector(s);
+
+const composer = $("#cglComposer");
+const century = $("#cglCentury");
+const period = $("#cglPeriod");
+const type = $("#cglType");
+const pieceSelect = $("#cglPiece");
+
+const clear = $("#cglClear");
+const random = $("#cglRandom");
+const open = $("#cglOpen");
+const newWindow = $("#cglNew");
+
+const frame = $("#cglFrame");
+const status = $("#cglStatus");
+const viewerTitle = $("#cglViewerTitle");
+
+const fallback = $("#cglFallback");
+const fallbackTitle = $("#cglFallbackTitle");
+const fallbackLink = $("#cglFallbackLink");
+
+const title = $("#cglTitle");
+const composerName = $("#cglComposerName");
+const metaCentury = $("#cglMetaCentury");
+const metaPeriod = $("#cglMetaPeriod");
+const metaType = $("#cglMetaType");
+const metaKey = $("#cglMetaKey");
+const description = $("#cglDescription");
+const direct = $("#cglDirect");
+
+
+/* ==========================================================
+   FILTER HELPERS
+   ========================================================== */
+
+function values(field){
+
+  return [...new Set(
+    pieces
+      .map(p => p[field])
+      .filter(Boolean)
+  )].sort((a,b) =>
+    a.localeCompare(
+      b,
+      undefined,
+      {numeric:true}
+    )
+  );
+
+}
+
+
+function populate(select, field, label){
+
+  select.innerHTML = "";
+
+  const first =
+    document.createElement("option");
+
+  first.value = "";
+  first.textContent = label;
+
+  select.appendChild(first);
+
+  values(field).forEach(value => {
+
+    const option =
+      document.createElement("option");
+
+    option.value = value;
+    option.textContent = value;
+
+    select.appendChild(option);
+
+  });
+
+}
+
+
+/* ==========================================================
+   FILTER
+   ========================================================== */
+
+function filtered(){
+
+  return pieces.filter(p => {
+
+    if(
+      composer.value &&
+      p.composer !== composer.value
+    ) return false;
+
+    if(
+      century.value &&
+      p.century !== century.value
+    ) return false;
+
+    if(
+      period.value &&
+      p.period !== period.value
+    ) return false;
+
+    if(
+      type.value &&
+      p.type !== type.value
+    ) return false;
+
+    return true;
+
+  });
+
+}
+
+
+/* ==========================================================
+   PIECE LIST
+   ========================================================== */
+
+function refresh(preferred){
+
+  const list = filtered();
+
+  pieceSelect.innerHTML = "";
+
+  if(!list.length){
+
+    const option =
+      document.createElement("option");
+
+    option.textContent =
+      "NO PIECES MATCH";
+
+    option.value = "";
+
+    pieceSelect.appendChild(option);
+
+    clearViewer();
+
+    return;
+  }
+
+
+  list.forEach((p,index) => {
+
+    const option =
+      document.createElement("option");
+
+    option.value = index;
+    option.textContent =
+      `${p.composer} — ${p.title}`;
+
+    pieceSelect.appendChild(option);
+
+  });
+
+
+  let index = 0;
+
+  if(preferred){
+
+    const found =
+      list.findIndex(
+        p => p.url === preferred
+      );
+
+    if(found >= 0){
+      index = found;
+    }
+
+  }
+
+  pieceSelect.selectedIndex = index;
+
+  show(list[index]);
+
+}
+
+
+/* ==========================================================
+   SHOW PIECE
+   ========================================================== */
+
+function show(piece){
+
+  if(!piece){
+    clearViewer();
+    return;
+  }
+
+
+  title.textContent =
+    piece.title;
+
+  composerName.textContent =
+    piece.composer;
+
+  metaCentury.textContent =
+    piece.century;
+
+  metaPeriod.textContent =
+    piece.period;
+
+  metaType.textContent =
+    piece.type;
+
+  metaKey.textContent =
+    piece.key;
+
+  description.textContent =
+    piece.description;
+
+
+  viewerTitle.textContent =
+    `${piece.composer} — ${piece.title}`;
+
+  direct.href =
+    piece.url;
+
+  fallbackLink.href =
+    piece.url;
+
+  fallbackTitle.textContent =
+    piece.title;
+
+
+  fallback.classList.remove("show");
+
+  status.textContent =
+    "LOADING";
+
+
+  /*
+   * ACTUAL TAB URL.
+   *
+   * No generic app.
+   * No fake filename.
+   * No JavaScript attempt to read the iframe.
+   */
+
+  frame.src =
+    piece.url;
+
+}
+
+
+/* ==========================================================
+   CLEAR VIEWER
+   ========================================================== */
+
+function clearViewer(){
+
+  frame.src =
+    "about:blank";
+
+  fallback.classList.remove("show");
+
+  status.textContent =
+    "READY";
+
+  viewerTitle.textContent =
+    "TAB VIEWER";
+
+  title.textContent = "—";
+  composerName.textContent = "—";
+  metaCentury.textContent = "—";
+  metaPeriod.textContent = "—";
+  metaType.textContent = "—";
+  metaKey.textContent = "—";
+
+  description.textContent =
+    "No piece matches the current filters.";
+
+  direct.removeAttribute("href");
+
+}
+
+
+/* ==========================================================
+   IFRAME
+   ========================================================== */
+
+frame.addEventListener(
+  "load",
+  () => {
+
+    /*
+     * Do not attempt:
+     *
+     * frame.contentDocument
+     * frame.contentWindow.document
+     *
+     * because Classtab is cross-origin.
+     */
+
+    status.textContent =
+      "TAB LOADED";
+
+  }
+);
+
+
+/*
+ * Some browsers may report an iframe navigation problem
+ * through error. Provide a direct link in that case.
+ */
+
+frame.addEventListener(
+  "error",
+  () => {
+
+    status.textContent =
+      "OPEN EXTERNALLY";
+
+    fallback.classList.add("show");
+
+  }
+);
+
+
+/* ==========================================================
+   CONTROLS
+   ========================================================== */
+
+[
+  composer,
+  century,
+  period,
+  type
+].forEach(select => {
+
+  select.addEventListener(
+    "change",
+    () => refresh()
+  );
+
+});
+
+
+pieceSelect.addEventListener(
+  "change",
+  () => {
+
+    const list =
+      filtered();
+
+    const piece =
+      list[
+        pieceSelect.selectedIndex
+      ];
+
+    show(piece);
+
+  }
+);
+
+
+/* CLEAR */
+
+clear.addEventListener(
+  "click",
+  () => {
+
+    composer.value = "";
+    century.value = "";
+    period.value = "";
+    type.value = "";
+
+    refresh();
+
+  }
+);
+
+
+/* RANDOM */
+
+random.addEventListener(
+  "click",
+  () => {
+
+    const list =
+      filtered();
+
+    if(!list.length) return;
+
+    const index =
+      Math.floor(
+        Math.random() * list.length
+      );
+
+    pieceSelect.selectedIndex =
+      index;
+
+    show(list[index]);
+
+  }
+);
+
+
+/* OPEN TAB */
+
+open.addEventListener(
+  "click",
+  () => {
+
+    const list =
+      filtered();
+
+    const piece =
+      list[
+        pieceSelect.selectedIndex
+      ];
+
+    if(!piece) return;
+
+    window.open(
+      piece.url,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+  }
+);
+
+
+/* NEW WINDOW */
+
+newWindow.addEventListener(
+  "click",
+  () => {
+
+    const list =
+      filtered();
+
+    const piece =
+      list[
+        pieceSelect.selectedIndex
+      ];
+
+    if(!piece) return;
+
+    const win =
+      window.open(
+        piece.url,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+    if(!win){
+
+      location.href =
+        piece.url;
+
+    }
+
+  }
+);
+
+
+/* ==========================================================
+   INITIALIZE
+   ========================================================== */
+
+populate(
+  composer,
+  "composer",
+  "ALL COMPOSERS"
+);
+
+populate(
+  century,
+  "century",
+  "ALL CENTURIES"
+);
+
+populate(
+  period,
+  "period",
+  "ALL PERIODS"
+);
+
+populate(
+  type,
+  "type",
+  "ALL TYPES"
+);
+
+refresh();
+
+})();
+</script>
+
+</div>
+
+</body>
+</html>
