@@ -279,8 +279,15 @@
               <input type="text" id="tool-doc-title" placeholder="My new document">
             </div>
             <button class="btn btn-primary btn-block" onclick="createToolDocument()">Add Write-v5 to Desktop</button>
-            <h3>Writing tools</h3>
-            <p class="help-text">More creative tools will appear here as they are added.</p>
+            <h3>Flash-card studio</h3>
+            <p class="help-text">Make a study window for this desktop. Add and organize sets from inside the tool.</p>
+            <div class="form-group">
+              <label for="flashcard-tool-name">Tool name</label>
+              <input type="text" id="flashcard-tool-name" value="Flash Cards">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="createFlashcardTool()">Add Flash Cards to Desktop</button>
+            <h3>Writing &amp; study tools</h3>
+            <p class="help-text">Tools open in their own themed desktop windows.</p>
           </div>
           <button class="btn btn-primary btn-block" onclick="createDocument()">Create Document</button>
 
@@ -559,6 +566,21 @@
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Could not create Write-v5');
+      }
+
+      function createFlashcardTool() {
+        const title = document.getElementById('flashcard-tool-name').value.trim() || 'Flash Cards';
+        fetch(`/api/desktop/${desktopId}/item`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ item_type: 'flashcards', name: title, icon: 'text' })
+        }).then(async response => {
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Could not add Flash Cards');
+          }
+          location.reload();
+        }).catch(error => alert(error.message));
       }
       location.reload();
     }).catch(error => alert(error.message));

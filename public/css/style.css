@@ -722,6 +722,164 @@ body {
   line-height: 1.7;
 }
 
+.flashcard-app {
+  min-height: 100%;
+  padding: 18px;
+  background: linear-gradient(145deg, #f8edcf, #d9b77b);
+  color: #2d2117;
+  font-family: "Courier New", monospace;
+}
+
+.flashcard-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.flashcard-header h2 {
+  font-family: Georgia, serif;
+  font-size: 1.45rem;
+  margin: 2px 0 0;
+}
+
+.flashcard-kicker,
+.flashcard-side-label {
+  color: #8b3f25;
+  font-size: 0.68rem;
+  font-weight: bold;
+  letter-spacing: 0.14em;
+}
+
+.flashcard-count,
+.flashcard-card-meta,
+.flashcard-hint {
+  color: #71583e;
+  font-size: 0.75rem;
+}
+
+.flashcard-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.flashcard-set-select,
+.flashcard-input {
+  background: rgba(255, 250, 235, 0.9);
+  border: 1px solid #9a6b3e;
+  border-radius: 6px;
+  color: #2d2117;
+  font: inherit;
+  padding: 8px;
+  width: 100%;
+}
+
+.flashcard-study {
+  margin: 14px 0 10px;
+  min-height: 150px;
+}
+
+.flashcard-card {
+  align-items: center;
+  background: #fff9e8;
+  border: 2px solid #8b3f25;
+  border-radius: 12px;
+  box-shadow: 5px 5px 0 rgba(91, 51, 24, 0.25);
+  color: #2d2117;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  min-height: 150px;
+  padding: 20px;
+  text-align: center;
+  width: 100%;
+}
+
+.flashcard-card.is-back {
+  background: #fff0bf;
+}
+
+.flashcard-card-text {
+  font-family: Georgia, serif;
+  font-size: 1.2rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.flashcard-empty {
+  align-items: center;
+  background: rgba(255, 250, 235, 0.55);
+  border: 1px dashed #9a6b3e;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  min-height: 150px;
+  padding: 18px;
+  text-align: center;
+}
+
+.flashcard-actions,
+.flashcard-mode-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.flashcard-button {
+  background: #8b3f25;
+  border: 1px solid #5b2b1b;
+  border-radius: 6px;
+  color: #fff9e8;
+  cursor: pointer;
+  font: bold 0.7rem "Courier New", monospace;
+  padding: 8px 10px;
+}
+
+.flashcard-builder {
+  border-top: 1px solid rgba(91, 51, 24, 0.35);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.flashcard-builder summary {
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.flashcard-builder .flashcard-input {
+  margin-bottom: 8px;
+}
+
+.flashcard-mode {
+  background: transparent;
+  border: 1px solid #9a6b3e;
+  border-radius: 5px;
+  color: #5b2b1b;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.flashcard-mode.active {
+  background: #d9b77b;
+  font-weight: bold;
+}
+
+.flashcard-create {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.flashcard-status {
+  color: #8b3f25;
+  font-size: 0.75rem;
+  margin-top: 8px;
+  min-height: 1em;
+}
+
 .gallery-thumb .delete {
   position: absolute;
   top: 4px;

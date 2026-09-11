@@ -107,6 +107,26 @@ def init_database
       FOREIGN KEY (desktop_id) REFERENCES desktops(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS flashcard_sets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      desktop_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (desktop_id) REFERENCES desktops(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS flashcards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      set_id INTEGER NOT NULL,
+      front TEXT NOT NULL,
+      back TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (set_id) REFERENCES flashcard_sets(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS icon_packs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -530,6 +550,14 @@ get '/desktop/:id/edit' do
     "SELECT * FROM retro_games WHERE desktop_id = ? ORDER BY sort_order",
     [@desktop['id']]
   )
+  @flashcard_sets = db.execute(
+    "SELECT * FROM flashcard_sets WHERE desktop_id = ? ORDER BY updated_at DESC",
+    [@desktop['id']]
+  )
+  @flashcards = db.execute(
+    "SELECT flashcards.* FROM flashcards JOIN flashcard_sets ON flashcard_sets.id = flashcards.set_id WHERE flashcard_sets.desktop_id = ? ORDER BY flashcards.sort_order",
+    [@desktop['id']]
+  )
   erb :edit_desktop
 end
 
@@ -578,7 +606,7 @@ post '/api/desktop/:id/item' do
   name = params[:name].to_s.strip
   halt 400, { success: false, error: 'Name is required' }.to_json if name.empty?
   item_type = params[:item_type].to_s
-  halt 400, { success: false, error: 'Unsupported item type' }.to_json unless %w[folder link text write].include?(item_type)
+  halt 400, { success: false, error: 'Unsupported item type' }.to_json unless %w[folder link text write flashcards].include?(item_type)
   parent_item_id = params[:parent_item_id].to_s.empty? ? nil : params[:parent_item_id].to_i
   if parent_item_id
     parent = db.execute(
@@ -853,6 +881,83 @@ delete '/api/desktop/:id/game/:game_id' do
 end
 
 # ============================================================================
+# ROUTES - FLASH CARDS
+# ============================================================================
+
+post '/api/desktop/:id/flashcard-set' do
+  require_login
+  desktop = require_desktop_owner(params[:id].to_i)
+  name = params[:name].to_s.strip
+  halt 400, { success: false, error: 'Set name is required.' }.to_json if name.empty?
+
+  cards = JSON.parse(params[:cards_json].to_s)
+  cards = cards.map do |card|
+    {
+      front: card['front'].to_s.strip,
+      back: card['back'].to_s.strip
+    }
+  end.select { |card| !card[:front].empty? && !card[:back].empty? }.first(500)
+  halt 400, { success: false, error: 'Add at least one card with both sides filled.' }.to_json if cards.empty?
+
+  db.transaction do
+    db.execute(
+      "INSERT INTO flashcard_sets (desktop_id, name, description) VALUES (?, ?, ?)",
+      [desktop['id'], name, params[:description].to_s.strip]
+    )
+    set_id = db.last_insert_row_id
+    cards.each_with_index do |card, index|
+      db.execute(
+        "INSERT INTO flashcards (set_id, front, back, sort_order) VALUES (?, ?, ?, ?)",
+        [set_id, card[:front], card[:back], index]
+      )
+    end
+  end
+
+  content_type :json
+  { success: true }.to_json
+rescue JSON::ParserError
+  halt 400, { success: false, error: 'The pasted card data could not be read.' }.to_json
+end
+
+post '/api/desktop/:id/flashcard-set/:set_id/card' do
+  require_login
+  desktop = require_desktop_owner(params[:id].to_i)
+  set = db.execute(
+    "SELECT * FROM flashcard_sets WHERE id = ? AND desktop_id = ?",
+    [params[:set_id], desktop['id']]
+  ).first
+  halt 404, { success: false, error: 'Flash-card set not found.' }.to_json unless set
+
+  front = params[:front].to_s.strip
+  back = params[:back].to_s.strip
+  halt 400, { success: false, error: 'Both sides of the card are required.' }.to_json if front.empty? || back.empty?
+
+  sort_order = db.execute(
+    "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM flashcards WHERE set_id = ?",
+    [set['id']]
+  ).first['next_order']
+  db.execute(
+    "INSERT INTO flashcards (set_id, front, back, sort_order) VALUES (?, ?, ?, ?)",
+    [set['id'], front, back, sort_order]
+  )
+  db.execute("UPDATE flashcard_sets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", [set['id']])
+
+  content_type :json
+  { success: true }.to_json
+end
+
+delete '/api/desktop/:id/flashcard-set/:set_id' do
+  require_login
+  desktop = require_desktop_owner(params[:id].to_i)
+  db.execute(
+    "DELETE FROM flashcard_sets WHERE id = ? AND desktop_id = ?",
+    [params[:set_id], desktop['id']]
+  )
+  content_type :json
+  { success: true }.to_json
+end
+
+# ============================================================================
 # ROUTES - PUBLISH / PREVIEW
 # ============================================================================
 
@@ -875,6 +980,14 @@ get '/desktop/:slug' do
   )
   @retro_games = db.execute(
     "SELECT * FROM retro_games WHERE desktop_id = ? ORDER BY sort_order",
+    [@desktop['id']]
+  )
+  @flashcard_sets = db.execute(
+    "SELECT * FROM flashcard_sets WHERE desktop_id = ? ORDER BY updated_at DESC",
+    [@desktop['id']]
+  )
+  @flashcards = db.execute(
+    "SELECT flashcards.* FROM flashcards JOIN flashcard_sets ON flashcard_sets.id = flashcards.set_id WHERE flashcard_sets.desktop_id = ? ORDER BY flashcards.sort_order",
     [@desktop['id']]
   )
 
@@ -935,6 +1048,14 @@ get '/desktop/:id/export' do
   )
   @retro_games = db.execute(
     "SELECT * FROM retro_games WHERE desktop_id = ? ORDER BY sort_order",
+    [desktop['id']]
+  )
+  @flashcard_sets = db.execute(
+    "SELECT * FROM flashcard_sets WHERE desktop_id = ? ORDER BY updated_at DESC",
+    [desktop['id']]
+  )
+  @flashcards = db.execute(
+    "SELECT flashcards.* FROM flashcards JOIN flashcard_sets ON flashcard_sets.id = flashcards.set_id WHERE flashcard_sets.desktop_id = ? ORDER BY flashcards.sort_order",
     [desktop['id']]
   )
 

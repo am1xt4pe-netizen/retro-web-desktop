@@ -407,7 +407,7 @@
   </div>
 
   <div class="start-menu" id="start-menu">
-    <% @items.select { |i| ['folder', 'gallery', 'game', 'retro_game'].include?(i['item_type']) }.each do |item| %>
+    <% @items.select { |i| ['folder', 'gallery', 'game', 'retro_game', 'flashcards'].include?(i['item_type']) }.each do |item| %>
       <div class="start-menu-item" onclick="openItem(<%= item['id'] %>, '<%= item['item_type'] %>', '<%= js_attr item['name'] %>')">
         <span><%= h item['name'] %></span>
       </div>
@@ -585,6 +585,9 @@
         case 'write':
           content = renderWrite(id);
           break;
+        case 'flashcards':
+          content = renderFlashcards();
+          break;
         case 'image':
           content = renderImage(id);
           break;
@@ -627,6 +630,11 @@
 
       document.getElementById('windows-container').appendChild(win);
       openWindows.set(win.id, win);
+
+      if (type === 'flashcards') {
+        const selector = win.querySelector('#flashcard-set-select');
+        if (selector && selector.value) selectFlashcardSet(selector);
+      }
 
       win.addEventListener('mousedown', () => {
         win.style.zIndex = ++windowCounter;
@@ -746,6 +754,122 @@
         `;
       }
       return '<div class="document-view"><p>Game not found</p></div>';
+    }
+
+    function renderFlashcards() {
+      const sets = <%= safe_json @flashcard_sets %>;
+      const cards = <%= safe_json @flashcards %>;
+      const options = sets.length
+        ? sets.map(set => `<option value="${set.id}">${escapeHtml(set.name)}</option>`).join('')
+        : '<option value="">No sets yet</option>';
+      return `
+        <div class="flashcard-app">
+          <div class="flashcard-header">
+            <div><span class="flashcard-kicker">STUDY DESK</span><h2>Flash Cards</h2></div>
+            <span class="flashcard-count">${cards.length} cards</span>
+          </div>
+          <label class="flashcard-label" for="flashcard-set-select">Choose a card set</label>
+          <select class="flashcard-set-select" id="flashcard-set-select" onchange="selectFlashcardSet(this)">
+            ${options}
+          </select>
+          <div class="flashcard-study" id="flashcard-study">
+            <div class="flashcard-empty">Create a set below, then choose it here to begin.</div>
+          </div>
+          <div class="flashcard-actions">
+            <button class="flashcard-button" onclick="flipFlashcard()">FLIP</button>
+            <button class="flashcard-button" onclick="nextFlashcard()">NEXT CARD</button>
+          </div>
+          <details class="flashcard-builder">
+            <summary>Make a new set</summary>
+            <input class="flashcard-input" id="flashcard-set-name" placeholder="Set name, e.g. Biology">
+            <div class="flashcard-mode-tabs">
+              <button class="flashcard-mode active" data-mode="manual" onclick="setFlashcardMode('manual')">Manual</button>
+              <button class="flashcard-mode" data-mode="bulk" onclick="setFlashcardMode('bulk')">Bulk table</button>
+            </div>
+            <div id="flashcard-manual-fields">
+              <textarea class="flashcard-input" id="flashcard-front" rows="2" placeholder="Front: term, question, or prompt"></textarea>
+              <textarea class="flashcard-input" id="flashcard-back" rows="3" placeholder="Back: definition, answer, or explanation"></textarea>
+            </div>
+            <div id="flashcard-bulk-fields" style="display:none;">
+              <textarea class="flashcard-input" id="flashcard-bulk" rows="7" placeholder="Paste two-column rows from a spreadsheet&#10;term<TAB>definition&#10;mitosis<TAB>cell division"></textarea>
+              <small class="flashcard-hint">Use tabs between columns and one card per line. Commas also work.</small>
+            </div>
+            <button class="flashcard-button flashcard-create" onclick="createFlashcardSet()">CREATE SET</button>
+            <div class="flashcard-status" id="flashcard-status" aria-live="polite"></div>
+          </details>
+        </div>
+      `;
+    }
+
+    let activeFlashcardSet = null;
+    let activeFlashcardIndex = 0;
+    let flashcardShowingBack = false;
+
+    function selectFlashcardSet(select) {
+      const cards = <%= safe_json @flashcards %>.filter(card => card.set_id == Number(select.value));
+      activeFlashcardSet = cards;
+      activeFlashcardIndex = 0;
+      flashcardShowingBack = false;
+      renderActiveFlashcard();
+    }
+
+    function renderActiveFlashcard() {
+      const target = document.querySelector('.flashcard-study');
+      if (!target) return;
+      if (!activeFlashcardSet || !activeFlashcardSet.length) {
+        target.innerHTML = '<div class="flashcard-empty">This set has no cards yet.</div>';
+        return;
+      }
+      const card = activeFlashcardSet[activeFlashcardIndex];
+      target.innerHTML = `
+        <button class="flashcard-card ${flashcardShowingBack ? 'is-back' : ''}" onclick="flipFlashcard()" aria-label="Flip card">
+          <span class="flashcard-side-label">${flashcardShowingBack ? 'ANSWER' : 'PROMPT'}</span>
+          <span class="flashcard-card-text">${escapeHtml(flashcardShowingBack ? card.back : card.front)}</span>
+          <span class="flashcard-card-meta">${activeFlashcardIndex + 1} / ${activeFlashcardSet.length}</span>
+        </button>
+      `;
+    }
+
+    function flipFlashcard() {
+      if (!activeFlashcardSet || !activeFlashcardSet.length) return;
+      flashcardShowingBack = !flashcardShowingBack;
+      renderActiveFlashcard();
+    }
+
+    function nextFlashcard() {
+      if (!activeFlashcardSet || !activeFlashcardSet.length) return;
+      activeFlashcardIndex = (activeFlashcardIndex + 1) % activeFlashcardSet.length;
+      flashcardShowingBack = false;
+      renderActiveFlashcard();
+    }
+
+    function setFlashcardMode(mode) {
+      document.querySelectorAll('.flashcard-mode').forEach(button => button.classList.toggle('active', button.dataset.mode === mode));
+      document.getElementById('flashcard-manual-fields').style.display = mode === 'manual' ? 'block' : 'none';
+      document.getElementById('flashcard-bulk-fields').style.display = mode === 'bulk' ? 'block' : 'none';
+    }
+
+    function createFlashcardSet() {
+      const name = document.getElementById('flashcard-set-name').value.trim();
+      const bulk = document.getElementById('flashcard-bulk-fields').style.display !== 'none';
+      const cards = bulk
+        ? document.getElementById('flashcard-bulk').value.split(/\r?\n/).map(line => {
+            const columns = line.split(/\t|,(?=\s|[^"]*$)/).map(value => value.trim().replace(/^"|"$/g, ''));
+            return { front: columns[0] || '', back: columns.slice(1).join(', ') || '' };
+          })
+        : [{ front: document.getElementById('flashcard-front').value, back: document.getElementById('flashcard-back').value }];
+      const status = document.getElementById('flashcard-status');
+      if (!name) { status.textContent = 'Give your set a name first.'; return; }
+      fetch(`/api/desktop/${desktopId}/flashcard-set`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ name: name, cards_json: JSON.stringify(cards) })
+      }).then(async response => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not create set.');
+        status.textContent = 'Set created. Refreshing cards…';
+        location.reload();
+      }).catch(error => { status.textContent = error.message; });
     }
 
     function closeWindow(id) {
