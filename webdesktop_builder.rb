@@ -11,12 +11,30 @@ require 'fileutils'
 require 'securerandom'
 require 'base64'
 require 'rack/utils'
+require 'net/http'
+require 'uri'
+require 'cgi'
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024 # 8MB cap on file/gallery uploads
+
+# Well-known, stable identifiers from the Internet Archive's game
+# collections, offered as one-click "quick add" chips in the editor.
+CURATED_GAMES = [
+  ['arcade_breakout', 'Breakout', 'arcade', '1976'],
+  ['arcade_spaceinvaders', 'Space Invaders', 'arcade', '1978'],
+  ['arcade_pacman', 'Pac-Man', 'arcade', '1980'],
+  ['arcade_donkeykong', 'Donkey Kong', 'arcade', '1981'],
+  ['arcade_frogger', 'Frogger', 'arcade', '1981'],
+  ['arcade_galaga', 'Galaga', 'arcade', '1981'],
+  ['arcade_defender', 'Defender', 'arcade', '1981'],
+  ['arcade_ms_pacman', 'Ms. Pac-Man', 'arcade', '1982'],
+  ['arcade_dig_dug', 'Dig Dug', 'arcade', '1982'],
+  ['arcade_joust', 'Joust', 'arcade', '1982']
+].freeze
 
 configure do
   set :sessions, true
@@ -31,6 +49,11 @@ configure do
   set :views, File.dirname(__FILE__) + '/views'
   set :bind, ENV['BIND'] || '0.0.0.0'
   set :port, ENV['PORT'] || 4567
+
+  # Sinatra only serves files from the public folder in production by
+  # default. Force it on so bundled tools (/tools/chord_lab.html,
+  # /tools/classical_guitar_library.html) work in every environment.
+  set :static, true
 end
 
 # ============================================================================
@@ -155,9 +178,31 @@ def init_database
       sort_order INTEGER DEFAULT 0,
       FOREIGN KEY (desktop_id) REFERENCES desktops(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS wallpapers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      desktop_id INTEGER NOT NULL,
+      filename TEXT NOT NULL,
+      file_data BLOB,
+      file_size INTEGER,
+      mime_type TEXT DEFAULT 'image/png',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (desktop_id) REFERENCES desktops(id) ON DELETE CASCADE
+    );
   SQL
 
   seed_default_data
+
+  # CREATE TABLE IF NOT EXISTS does not add columns to pre-existing tables,
+  # so migrate databases from older versions of the app here.
+  ensure_column('desktops', 'effects', 'TEXT')
+  ensure_column('desktop_items', 'parent_id', 'INTEGER')
+end
+
+# Adds a column to a table unless it already exists (lightweight migration).
+def ensure_column(table, column, definition)
+  existing = db.execute("PRAGMA table_info(#{table})").map { |r| r['name'] }
+  db.execute("ALTER TABLE #{table} ADD COLUMN #{column} #{definition}") unless existing.include?(column)
 end
 
 def seed_default_data
@@ -237,6 +282,34 @@ def seed_default_data
       )
     end
   end
+
+  # VHS / CRT wallpaper presets (art direction: 1970s VHS style board).
+  # url schemes:
+  #   solid:<hex>     -> applied as the background color
+  #   gradient:<css>  -> applied raw as background-image (may be a comma list)
+  #   data:/http...   -> applied as url('<...>')
+  noise = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"
+  amber_grid = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M40 0H0V40' fill='none' stroke='rgba(255,176,0,0.30)' stroke-width='1'/%3E%3C/svg%3E"
+  sprocket = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='22'%3E%3Crect width='34' height='22' fill='%230a0a0a'/%3E%3Ccircle cx='17' cy='11' r='4' fill='%232a2a2a'/%3E%3C/svg%3E"
+
+  vhs_bgs = [
+    ['Channel Snow', 'vhs', "gradient:url(\"#{noise}\"), linear-gradient(180deg, #0c0c10 0%, #14141a 100%)", 0],
+    ['Test Pattern', 'vhs', "gradient:linear-gradient(180deg, transparent 0% 62%, #000 62% 78%, #0a0a0a 78% 92%, transparent 92% 100%), linear-gradient(90deg, #fff 0% 14.28%, #ff0 14.28% 28.5%, #0ff 28.5% 42.8%, #0f0 42.8% 57%, #f0f 57% 71.2%, #f00 71.2% 85.5%, #00f 85.5% 100%)", 0],
+    ['Amber Grid', 'vhs', "gradient:url(\"#{amber_grid}\"), radial-gradient(120% 100% at 50% 50%, #1a0e00 0%, #000 80%)", 1],
+    ['CRT Rings', 'vhs', 'gradient:repeating-radial-gradient(circle at 50% 50%, rgba(160,200,255,0.07) 0 2px, transparent 2px 7px), radial-gradient(120% 100% at 50% 40%, #101820 0%, #000 78%)', 0],
+    ['Sunset 1979', 'vhs', 'gradient:linear-gradient(180deg, #1a1a4a 0%, #5a2a6a 30%, #c03a6a 55%, #ff7a2a 78%, #ffd24a 100%)', 0],
+    ['Film Leader', 'vhs', "gradient:url(\"#{sprocket}\"), radial-gradient(120% 100% at 50% 50%, #caa06a 0%, #6e4a24 60%, #2a1a0a 100%)", 1],
+    ['70s Living Room', 'vhs', 'gradient:radial-gradient(circle at 50% 30%, rgba(255,210,120,0.40), transparent 55%), linear-gradient(180deg, #c9b27a 0%, #b7a06a 55%, #9c7a44 100%)', 0],
+    ['Deep Space Teal', 'vhs', 'gradient:radial-gradient(120% 100% at 50% 40%, #00404a 0%, #00181f 75%)', 0]
+  ]
+  vhs_bgs.each do |bg|
+    unless bg_existing.include?(bg[0])
+      db.execute(
+        "INSERT INTO backgrounds (name, category, url, is_tiled) VALUES (?, ?, ?, ?)",
+        bg
+      )
+    end
+  end
 end
 
 # ============================================================================
@@ -310,6 +383,48 @@ helpers do
   # (item names, captions, doc titles) containing a literal "</script>"
   # sequence, which would otherwise terminate the script tag early and let
   # arbitrary HTML/script run on a page anyone can view.
+  # Translates a stored background_image value into CSS for the desktop's
+  # body element. Supports the url schemes documented in seed_default_data:
+  #   solid:<hex>     -> { 'color' => hex } (applied as background-color)
+  #   gradient:<css>  -> { 'image' => css } (applied raw as background-image)
+  #   anything else   -> { 'image' => "url('<value>')" }
+  # The editor stores whichever string the user picked (or typed), so every
+  # rendering surface (published page, preview iframe, HTML export) goes
+  # through this one helper and stays consistent.
+  def background_image_props(url)
+    value = url.to_s.strip
+    return {} if value.empty?
+
+    if value.start_with?('solid:')
+      hex = value.sub(/\Asolid:/, '')
+      return {} unless hex =~ /\A#[0-9a-fA-F]{3,8}\z/
+      { 'color' => hex }
+    elsif value.start_with?('gradient:')
+      { 'image' => value.sub(/\Agradient:/, '') }
+    else
+      { 'image' => "url('#{value.gsub("'", "%27")}')" }
+    end
+  end
+
+  # The string stored in desktops.background_image when the user picks a
+  # preset from the editor. Legacy solid presets store a bare hex in the url
+  # column, so normalize it to the solid:<hex> scheme.
+  def bg_preset_value(bg)
+    url = bg['url'].to_s
+    return "solid:#{url}" if bg['category'] == 'solid' && url =~ /\A#[0-9a-fA-F]{3,8}\z/
+    url
+  end
+
+  # Inline CSS for a preset swatch in the editor's background picker.
+  def bg_preset_style(value)
+    props = background_image_props(value)
+    css = []
+    css << "background-color: #{props['color']}" if props['color']
+    css << "background-image: #{props['image']}" if props['image']
+    css << 'background-size: cover'
+    css.join('; ')
+  end
+
   def safe_json(obj)
     obj.to_json.gsub('</', '<\/')
   end
@@ -320,6 +435,17 @@ end
 # ============================================================================
 
 get '/' do
+  if logged_in?
+    redirect '/dashboard'
+  else
+    erb :welcome
+  end
+end
+
+# The themed landing page (feature overview + sign up) lives at /home so
+# that / can be the cinematic pre-landing welcome screen, which links here
+# via its "Press play to enter" button.
+get '/home' do
   if logged_in?
     redirect '/dashboard'
   else
@@ -411,17 +537,19 @@ post '/desktop/new' do
   desktop_id = db.last_insert_row_id
 
   default_items = [
-    ['folder', 'My Documents', 'folder', 20, 20],
-    ['file', 'Readme.txt', 'text', 20, 100],
-    ['link', 'My Links', 'link', 20, 180],
-    ['gallery', 'My Photos', 'gallery', 20, 260],
-    ['game', 'Retro Games', 'retro_game', 20, 340]
+    ['folder', 'My Documents', 'folder', 20, 20, nil],
+    ['file', 'Readme.txt', 'text', 20, 100, nil],
+    ['link', 'My Links', 'link', 20, 180, nil],
+    ['gallery', 'My Photos', 'gallery', 20, 260, nil],
+    ['game', 'Retro Games', 'retro_game', 20, 340, nil],
+    ['link', 'Chord Lab', 'link', 20, 420, '/tools/chord_lab.html'],
+    ['link', 'Guitar Library', 'link', 20, 500, '/tools/classical_guitar_library.html']
   ]
 
   default_items.each_with_index do |item, i|
     db.execute(
-      "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [desktop_id, item[0], item[1], item[2], item[3], item[4], i]
+      "INSERT INTO desktop_items (desktop_id, item_type, name, icon, x_position, y_position, url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [desktop_id, item[0], item[1], item[2], item[3], item[4], item[5], i]
     )
   end
 
@@ -449,6 +577,11 @@ get '/desktop/:id/edit' do
     "SELECT * FROM retro_games WHERE desktop_id = ? ORDER BY sort_order",
     [@desktop['id']]
   )
+  @wallpapers = db.execute(
+    "SELECT * FROM wallpapers WHERE desktop_id = ? ORDER BY created_at DESC",
+    [@desktop['id']]
+  )
+  @curated_games = CURATED_GAMES
   erb :edit_desktop
 end
 
@@ -460,16 +593,24 @@ post '/api/desktop/:id/update' do
   require_login
   desktop = require_desktop_owner(params[:id].to_i)
 
+  updates = []
+  values = []
+
+  # background_image is handled outside the generic loop: an empty value must
+  # actually clear the column (e.g. "remove wallpaper"), which the non-empty
+  # check below can't express.
+  if params.key?('background_image')
+    updates << 'background_image = ?'
+    values << params['background_image'].to_s
+  end
+
   fields = [
-    'background_color', 'background_image', 'background_repeat',
+    'background_color', 'background_repeat',
     'background_size', 'wallpaper_style', 'font_family', 'icon_size',
     'grid_size', 'taskbar_position', 'taskbar_color', 'window_theme',
     'custom_css', 'manifest_name', 'manifest_short_name',
     'manifest_theme_color', 'manifest_background_color'
   ]
-
-  updates = []
-  values = []
   fields.each do |field|
     if params[field] && !params[field].to_s.empty?
       updates << "#{field} = ?"
@@ -697,6 +838,101 @@ get '/api/desktop/:id/gallery/:image_id' do
 end
 
 # ============================================================================
+# ROUTES - CUSTOM WALLPAPERS
+# ============================================================================
+#
+# Uploads are stored as BLOBs in the wallpapers table (one row per desktop)
+# and the desktop's background_image is pointed at the serving route below,
+# so a custom wallpaper behaves exactly like any other background URL on the
+# published page and in the editor preview.
+
+post '/api/desktop/:id/wallpaper' do
+  require_login
+  desktop = require_desktop_owner(params[:id].to_i)
+
+  unless params[:wallpaper] && params[:wallpaper][:tempfile]
+    halt 400, { success: false, error: 'No image uploaded' }.to_json
+  end
+
+  image = params[:wallpaper]
+  mime_type = image[:type].to_s
+  halt 400, { success: false, error: 'Unsupported file type' }.to_json unless mime_type =~ /\Aimage\/(png|jpe?g|gif|webp|svg\+xml|avif)\z/
+
+  file_data = image[:tempfile].read
+  if file_data.bytesize > MAX_UPLOAD_BYTES
+    halt 413, { success: false, error: "Image too large (max #{MAX_UPLOAD_BYTES / 1024 / 1024}MB)" }.to_json
+  end
+
+  # Bind as a genuine binary string (same approach as the gallery uploads).
+  binary_data = file_data.dup.force_encoding(Encoding::ASCII_8BIT)
+
+  db.execute(
+    "INSERT INTO wallpapers (desktop_id, filename, file_data, file_size, mime_type) VALUES (?, ?, ?, ?, ?)",
+    [
+      desktop['id'],
+      File.basename(image[:filename].to_s),
+      binary_data,
+      binary_data.bytesize,
+      mime_type
+    ]
+  )
+  wallpaper_id = db.last_insert_row_id
+  wallpaper_url = "/api/desktop/#{desktop['id']}/wallpaper/#{wallpaper_id}"
+
+  # Apply the fresh upload as the desktop background immediately.
+  db.execute(
+    "UPDATE desktops SET background_image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+    [wallpaper_url, desktop['id']]
+  )
+
+  content_type :json
+  { success: true, id: wallpaper_id, url: wallpaper_url }.to_json
+end
+
+# Public (no login), like the gallery/file serving routes, because the
+# wallpaper must load for any visitor of a published desktop.
+get '/api/desktop/:id/wallpaper/:wallpaper_id' do
+  desktop = db.execute("SELECT * FROM desktops WHERE id = ?", [params[:id].to_i]).first
+  halt 404 unless desktop
+
+  wallpaper = db.execute(
+    "SELECT * FROM wallpapers WHERE id = ? AND desktop_id = ?",
+    [params[:wallpaper_id], desktop['id']]
+  ).first
+  halt 404 unless wallpaper
+
+  content_type wallpaper['mime_type'] || 'image/png'
+  wallpaper['file_data']
+end
+
+delete '/api/desktop/:id/wallpaper/:wallpaper_id' do
+  require_login
+  desktop = require_desktop_owner(params[:id].to_i)
+
+  wallpaper = db.execute(
+    "SELECT * FROM wallpapers WHERE id = ? AND desktop_id = ?",
+    [params[:wallpaper_id], desktop['id']]
+  ).first
+  halt 404 unless wallpaper
+
+  db.execute(
+    "DELETE FROM wallpapers WHERE id = ? AND desktop_id = ?",
+    [params[:wallpaper_id], desktop['id']]
+  )
+
+  # If this wallpaper was the desktop's background, clear it.
+  if desktop['background_image'] == "/api/desktop/#{desktop['id']}/wallpaper/#{wallpaper['id']}"
+    db.execute(
+      "UPDATE desktops SET background_image = '', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [desktop['id']]
+    )
+  end
+
+  content_type :json
+  { success: true }.to_json
+end
+
+# ============================================================================
 # ROUTES - TEXT EDITOR
 # ============================================================================
 
@@ -847,6 +1083,20 @@ get '/desktop/:id/export' do
   desktop = require_desktop_owner(params[:id].to_i)
 
   @desktop = desktop
+
+  # A custom wallpaper is served from a /api/.../wallpaper/... route, which
+  # is useless inside a standalone file -- swap it for an embedded data URI
+  # so the export keeps its background fully offline.
+  @export_bg_image = desktop['background_image']
+  if @export_bg_image.to_s =~ %r{\A/api/desktop/(\d+)/wallpaper/(\d+)\z}
+    wp = db.execute(
+      "SELECT * FROM wallpapers WHERE id = ? AND desktop_id = ?",
+      [Regexp.last_match(2).to_i, desktop['id']]
+    ).first
+    if wp
+      @export_bg_image = "data:#{wp['mime_type'] || 'image/png'};base64,#{Base64.strict_encode64(wp['file_data'].to_s)}"
+    end
+  end
   @items = db.execute(
     "SELECT * FROM desktop_items WHERE desktop_id = ? ORDER BY sort_order",
     [desktop['id']]

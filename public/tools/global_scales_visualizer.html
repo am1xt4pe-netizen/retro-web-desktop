@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Scales & Maqams Visualizer</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: Courier, monospace;
+            background: #0a0018;
+            color: #00fff7;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60%;
+            background:
+                linear-gradient(#ff00cc44 1px, transparent 1px),
+                linear-gradient(90deg, #ff00cc44 1px, transparent 1px);
+            background-size: 40px 40px;
+            transform: perspective(400px) rotateX(60deg);
+            transform-origin: bottom;
+            pointer-events: none;
+            z-index: -998;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                transparent 0px, transparent 2px, rgba(0,0,0,.25) 3px
+            );
+            z-index: 999;
+        }
+
+        .taskbar {
+            background: #ff00cc;
+            color: black;
+            text-align: center;
+            padding: 8px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            margin: 5px 0 5px;
+            color: #00fff7;
+            text-align: center;
+            text-shadow: 0 0 8px #00fff7;
+            letter-spacing: 2px;
+            font-size: 1.3rem;
+        }
+        p.subtitle {
+            color: #ff00cc;
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+            max-width: 600px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .instrument-toggle {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .instBtn {
+            background: black;
+            color: #00fff7;
+            border: 1px solid #00fff7;
+            padding: 10px 16px;
+            font-family: Courier, monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .instBtn.active {
+            background: #ff00cc;
+            color: black;
+            box-shadow: 0 0 10px #ff00cc;
+            border-color: #ff00cc;
+        }
+
+        .controls-container {
+            background: #050510;
+            border: 2px solid #00fff7;
+            box-shadow: 0 0 20px #00fff7;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-end;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ff00cc;
+        }
+
+        select {
+            background: black;
+            color: #00fff7;
+            border: 1px solid #ff00cc;
+            padding: 10px 15px;
+            font-family: Courier, monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            outline: none;
+            min-width: 190px;
+            max-width: 260px;
+        }
+        select:hover, select:focus { background: #ff00cc; color: black; }
+
+        .info-panel {
+            background: #050510;
+            border: 2px solid #ff00cc;
+            box-shadow: 0 0 15px #ff00cc55;
+            padding: 12px 20px;
+            max-width: 1000px;
+            width: 100%;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #00fff7;
+        }
+        .info-panel strong { color: #ff00cc; }
+        .info-note {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: #ffcc00cc;
+        }
+
+        .fretboard-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            overflow-x: auto;
+            background: #050510;
+            border: 2px solid #00fff7;
+            box-shadow: 0 0 20px #00fff7;
+            padding: 20px 10px 30px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        /* ===== GUITAR: equal-width flex layout ===== */
+        .fretboard {
+            position: relative;
+            display: grid;
+            background:
+                repeating-linear-gradient(
+                    180deg,
+                    #0d0020 0px, #0d0020 39px,
+                    #100026 40px
+                ),
+                linear-gradient(180deg, #12002a, #0a0018 60%, #12002a);
+            border-top: 3px solid #ff00cc;
+            border-bottom: 3px solid #ff00cc;
+            box-shadow: inset 0 0 30px #00000099, 0 0 14px #ff00cc55;
+            min-width: 900px;
+        }
+
+        .string { display: flex; height: 40px; position: relative; align-items: center; }
+        .string::before {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; top: 50%;
+            transform: translateY(-50%);
+            height: var(--string-thickness, 2px);
+            background: linear-gradient(180deg, #ffffff, #00fff7 40%, #00898a);
+            box-shadow: 0 0 6px #00fff7, 0 0 2px #ffffffaa;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .fret {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            min-width: 45px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        .fret.wire::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #fff, #00fff7 45%, #052a2b);
+            box-shadow: 0 0 5px #00fff7aa;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .fret-0 {
+            flex: 0 0 56px;
+            min-width: 56px;
+            background: linear-gradient(90deg, #1a0030, #22003f 85%, #22003f 100%);
+            position: relative;
+        }
+        .fret-0::after {
+            content: '';
+            position: absolute;
+            top: -3px; bottom: -3px; right: 0;
+            width: 6px;
+            background: linear-gradient(180deg, #fff, #ff00cc 50%, #7a0055);
+            box-shadow: 0 0 10px #ff00cc, 0 0 4px #ffffffcc;
+            z-index: 2;
+        }
+        .marker-dot {
+            position: absolute; width: 8px; height: 8px;
+            background: #ff00cc; border-radius: 50%;
+            bottom: -18px; left: calc(50% - 4px);
+            z-index: 0; opacity: 0.7; box-shadow: 0 0 6px #ff00cc;
+            pointer-events: none;
+        }
+        .marker-double-top {
+            position: absolute; width: 8px; height: 8px;
+            background: #ff00cc; border-radius: 50%;
+            bottom: -12px; left: calc(50% - 14px);
+            z-index: 0; opacity: 0.7; box-shadow: 0 0 6px #ff00cc;
+            pointer-events: none;
+        }
+        .marker-double-bottom {
+            position: absolute; width: 8px; height: 8px;
+            background: #ff00cc; border-radius: 50%;
+            bottom: -12px; left: calc(50% + 6px);
+            z-index: 0; opacity: 0.7; box-shadow: 0 0 6px #ff00cc;
+            pointer-events: none;
+        }
+        .fret-number-row { display: flex; min-width: 900px; margin-top: 8px; box-sizing: border-box; }
+        .fret-num { flex: 1; text-align: center; font-size: 0.75rem; color: #ff00cc99; min-width: 45px; }
+        .fret-num-0 {
+            flex: 0 0 56px; min-width: 56px; color: #ff00cc; font-weight: bold; text-shadow: 0 0 6px #ff00cc;
+        }
+
+        /* ===== OUD: geometrically-spaced absolute layout ===== */
+        .oud-board {
+            position: relative;
+            height: 240px;
+            background:
+                repeating-linear-gradient(180deg, #0d0020 0px, #0d0020 39px, #100026 40px),
+                linear-gradient(180deg, #12002a, #0a0018 60%, #12002a);
+            border-top: 3px solid #ff00cc;
+            border-bottom: 3px solid #ff00cc;
+            box-shadow: inset 0 0 30px #00000099, 0 0 14px #ff00cc55;
+        }
+        .oud-string-line {
+            position: absolute;
+            left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(180deg, #ffffff, #00fff7 40%, #00898a);
+            box-shadow: 0 0 6px #00fff7, 0 0 2px #ffffffaa;
+        }
+        .oud-nut {
+            position: absolute;
+            top: -3px; bottom: -3px; left: 0;
+            width: 6px;
+            background: linear-gradient(180deg, #fff, #ff00cc 50%, #7a0055);
+            box-shadow: 0 0 10px #ff00cc, 0 0 4px #ffffffcc;
+            z-index: 3;
+        }
+        .oud-tick {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 1px;
+            background: #00fff744;
+            pointer-events: none;
+        }
+        .oud-tick.octave {
+            width: 2px;
+            background: #ff00cc99;
+            box-shadow: 0 0 6px #ff00cc88;
+        }
+        .oud-num {
+            position: absolute;
+            top: -22px;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            color: #ff00cc99;
+            white-space: nowrap;
+        }
+        .oud-num.zero { color: #ff00cc; font-weight: bold; text-shadow: 0 0 6px #ff00cc; transform: none; left: 0 !important; }
+
+        /* ===== shared note styling ===== */
+        .note {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: transparent;
+            color: transparent;
+            display: flex; justify-content: center; align-items: center;
+            font-family: Courier, monospace;
+            font-size: 0.66rem; font-weight: bold;
+            z-index: 2;
+            transition: all 0.15s ease;
+            user-select: none;
+            cursor: default;
+            border: 1px solid transparent;
+        }
+        .oud-note {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 20px; height: 20px;
+            font-size: 0.48rem;
+        }
+
+        .note.active-scale {
+            background: black;
+            color: #00fff7;
+            border-color: #00fff7;
+            box-shadow: 0 0 6px #00fff788;
+        }
+        .note.active-scale.is-root {
+            background: #ff00cc !important;
+            color: black !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 12px #ff00cc, 0 0 4px #fff;
+            transform: scale(1.15);
+        }
+        .oud-note.active-scale.is-root { transform: translate(-50%, -50%) scale(1.2); }
+
+        /* microtone / approximated degree: amber, distinct from natural cyan */
+        .note.active-scale.micro {
+            background: #221100;
+            color: #ffcc00;
+            border-color: #ffcc00;
+            box-shadow: 0 0 6px #ffcc0099;
+        }
+        .note.active-scale.micro.is-root {
+            background: #ff9900 !important;
+            color: black !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 12px #ff9900, 0 0 4px #fff;
+        }
+
+        .legend { display: flex; gap: 18px; margin-top: 5px; margin-bottom: 30px; font-size: 0.8rem; flex-wrap: wrap; justify-content: center; }
+        .legend-item { display: flex; align-items: center; gap: 7px; color: #00fff7; }
+        .legend-color { width: 14px; height: 14px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+
+    <div class="taskbar">✦ OLD MIXTAPE — SCALE MACHINE ✦</div>
+
+    <h1>GLOBAL SCALES &amp; MAQAMS VISUALIZER</h1>
+    <p class="subtitle">// same scale list on guitar (12-tone, approximated) or fretless Turkish oud (24-tone, true quarter-tones, real neck spacing) //</p>
+
+    <div class="controls-container">
+        <div class="control-group">
+            <label>Instrument</label>
+            <div class="instrument-toggle">
+                <button id="btnGuitar" class="instBtn active">🎸 Guitar</button>
+                <button id="btnOud" class="instBtn">🪕 Oud</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="scale-select">Scale / Maqam</label>
+            <select id="scale-select"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="root-select">Root / Tonic</label>
+            <select id="root-select"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="drone-select">Drone / Pedal Tone</label>
+            <select id="drone-select"></select>
+        </div>
+
+        <div class="control-group" id="drone-option-group" style="display:none;">
+            <label for="drone-option-select">Ghammaz Option</label>
+            <select id="drone-option-select"></select>
+        </div>
+    </div>
+
+    <div class="info-panel" id="info-panel"><strong>Info:</strong> Loading...</div>
+
+    <div class="fretboard-wrapper" id="fretboard-wrapper">
+        <div class="fretboard" id="fretboard" style="display:none;"></div>
+        <div class="fret-number-row" id="fret-numbers" style="display:none;"></div>
+        <div class="oud-board" id="oud-board" style="display:none;"></div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:#ff00cc; box-shadow:0 0 6px #ff00cc;"></div><span>Root Note</span></div>
+        <div class="legend-item"><div class="legend-color" style="background:black; border:1px solid #00fff7; box-shadow:0 0 4px #00fff788;"></div><span>Scale Tone</span></div>
+        <div class="legend-item"><div class="legend-color" style="background:#221100; border:1px solid #ffcc00; box-shadow:0 0 4px #ffcc0099;"></div><span>↓/↑ Quarter-tone / Approximated Degree</span></div>
+    </div>
+
+    <script>
+        const NOTE_12 = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+        const NOTE_24 = ["C","C+","C#","C#+","D","D+","D#","D#+","E","E+","F","F+","F#","F#+","G","G+","G#","G#+","A","A+","A#","A#+","B","B+"];
+
+        function rootLabel24(name){
+            const i = NOTE_24.indexOf(name);
+            if (i % 2 === 1){
+                const next = NOTE_24[(i+1) % 24].replace("+","");
+                return `${name} (≈${next}½♭)`;
+            }
+            return name;
+        }
+
+        //////////////////////////////////////////////////////////
+        // CANONICAL SCALE DATA
+        // dronePositions: the idiomatic drone/pedal tone(s) for this
+        // scale, expressed as 24-EDO interval(s) above the root.
+        // One entry = a single conventional drone (tanpura Pa, maqam
+        // ghammaz, dastgah shahed, etc). Two entries = a documented
+        // ambiguity between two valid drone positions (e.g. Sikah,
+        // Saba) — the UI will let you pick which one applies.
+        //////////////////////////////////////////////////////////
+        const scalesData = {
+            "Mayamalavagowla (Carnatic)": { intervals: [0,2,8,10,14,16,22],
+                dronePositions: [{interval:14, label:"Pa (perfect 5th) — standard tanpura drone"}],
+                desc: "<strong>Carnatic (Melakarta 15):</strong> Wide gaps between paired notes. Mood: sacred, meditative. Traditionally the first scale taught to students. No microtones." },
+            "Dheerasankarabharanam (Carnatic)": { intervals: [0,4,8,10,14,18,22],
+                dronePositions: [{interval:14, label:"Pa (perfect 5th) — standard tanpura drone"}],
+                desc: "<strong>Carnatic (Melakarta 29):</strong> Equivalent to the Western Major scale / Ionian mode. Mood: majestic and bright. No microtones." },
+            "Kharaharapriya (Carnatic)": { intervals: [0,4,6,10,14,18,20],
+                dronePositions: [{interval:14, label:"Pa (perfect 5th) — standard tanpura drone"}],
+                desc: "<strong>Carnatic (Melakarta 22):</strong> Equivalent to the Western Dorian mode. Mood: highly expressive and fluid. No microtones." },
+            "MechaKalyani (Carnatic)": { intervals: [0,4,8,12,14,18,22],
+                dronePositions: [{interval:14, label:"Pa (perfect 5th) — standard tanpura drone"}],
+                desc: "<strong>Carnatic (Melakarta 65):</strong> Equivalent to the Western Lydian mode. Mood: uplifting, floating, light-filled. No microtones." },
+            "Hanumatodi (Carnatic)": { intervals: [0,2,6,10,14,16,20],
+                dronePositions: [{interval:14, label:"Pa (perfect 5th) — standard tanpura drone"}],
+                desc: "<strong>Carnatic (Melakarta 8):</strong> Close to the Western Phrygian mode. Mood: compassionate, contemplative. No microtones." },
+            "Mohanam (Carnatic)": { intervals: [0,4,8,14,18],
+                dronePositions: [{interval:14, label:"Pa (perfect 5th) — standard tanpura drone"}],
+                desc: "<strong>Carnatic (Pentatonic):</strong> Five notes, equivalent to the Major Pentatonic. Mood: joyful and open. No microtones." },
+            "Hamsadhwani (Carnatic)": { intervals: [0,4,8,14,22],
+                dronePositions: [{interval:14, label:"Pa (perfect 5th) — standard tanpura drone"}],
+                desc: "<strong>Carnatic (Pentatonic):</strong> Bright five-note scale, popular in film and light classical music. No microtones." },
+            "Hindolam (Carnatic)": { intervals: [0,6,10,16,20],
+                dronePositions: [{interval:10, label:"Ma (perfect 4th) — tanpura retuned since this raga has no Pa (cf. Malkauns)"}],
+                desc: "<strong>Carnatic (Pentatonic):</strong> Not the same as the Western minor pentatonic — it swaps out the perfect 5th for a minor 6th, which is exactly what gives it its ambiguous, introspective quality. Mood: soulful, meditative (equivalent to Hindustani Malkauns). No microtones." },
+
+            "Rast (Maqam)": { intervals: [0,4,7,10,14,18,21],
+                dronePositions: [{interval:14, label:"Ghammaz — perfect 5th (Jins Upper Rast/Nahawand begins here)"}],
+                desc: "<strong>Maqam Rast</strong> (Turkish: Rast). The foundational maqam of the Arabic/Turkish system. Its 3rd and 7th degrees are half-flat. On guitar these round to a major-scale shape; on oud they sit at a true quarter-tone." },
+            "Bayati (Maqam)": { intervals: [0,3,6,10,14,17,20],
+                dronePositions: [{interval:10, label:"Ghammaz — perfect 4th (Jins Nahawand/Rast begins here)"}],
+                desc: "<strong>Maqam Bayati</strong> (related to Turkish Uşşak). One of the most common maqams in folk and popular Arabic music. Its half-flat 2nd degree is the defining color." },
+            "Sikah (Maqam)": { intervals: [0,3,7,11,14,17,21],
+                dronePositions: [
+                    {interval:7, label:"Primary ghammaz — 3rd degree (Jins Upper Rast begins here)"},
+                    {interval:17, label:"Secondary ghammaz — 6th degree (Jins Rast begins here)"}
+                ],
+                desc: "<strong>Maqam Sikah</strong> (Turkish: Segâh). Its tonic itself sits on a half-flat note (traditionally E half-flat — root 'D#+' on oud). Considered the most microtonally distinctive maqam." },
+            "Hijaz (Maqam)": { intervals: [0,2,8,10,14,16,20],
+                dronePositions: [{interval:10, label:"Ghammaz — perfect 4th (Jins Nahawand/Rast begins here)"}],
+                desc: "<strong>Maqam Hijaz</strong> (Turkish: Hicaz). No quarter-tones — built on an augmented 2nd between the 2nd and 3rd degrees. Identical on guitar and oud." },
+            "Hijaz Kar (Maqam)": { intervals: [0,2,8,10,14,16,22],
+                dronePositions: [{interval:10, label:"Ghammaz — perfect 4th (Jins Nikriz begins here)"}],
+                desc: "<strong>Maqam Hijaz Kar</strong> (Turkish: Hicazkâr). A double-Hijaz: augmented 2nds in both tetrachords. No microtones." },
+            "Kurd (Maqam)": { intervals: [0,2,6,10,14,16,20],
+                dronePositions: [{interval:10, label:"Ghammaz — perfect 4th (Jins Nahawand begins here)"}],
+                desc: "<strong>Maqam Kurd</strong> (Turkish: Kürdî). No quarter-tones — equivalent to the Western Phrygian mode." },
+            "Nahawand (Maqam)": { intervals: [0,4,6,10,14,16,20],
+                dronePositions: [{interval:14, label:"Ghammaz — perfect 5th (Jins Hijaz/Kurd begins here)"}],
+                desc: "<strong>Maqam Nahawand</strong> (Turkish: Nihavend). No quarter-tones — close to the Western natural minor scale." },
+            "Ajam (Maqam)": { intervals: [0,4,8,10,14,18,22],
+                dronePositions: [{interval:14, label:"Ghammaz — perfect 5th (Jins Upper Ajam/Nahawand begins here)"}],
+                desc: "<strong>Maqam Ajam</strong> (Turkish: Acem). No quarter-tones — equivalent to the Western Major scale." },
+            "Saba (Maqam)": { intervals: [0,3,6,8,12,16,20],
+                dronePositions: [
+                    {interval:6, label:"Ghammaz option A — 3rd degree (Jins Saba's ambiguous size)"},
+                    {interval:16, label:"Ghammaz option B — 6th degree (Jins Saba's ambiguous size)"}
+                ],
+                desc: "<strong>Maqam Saba</strong> (Turkish: Sabâ). Contains both a half-flat 2nd and a flattened 4th, creating a narrow falling shape — often used for laments." },
+            "Nikriz (Maqam)": { intervals: [0,4,6,12,14,18,20],
+                dronePositions: [{interval:14, label:"Ghammaz — perfect 5th (Jins Nahawand begins here)"}],
+                desc: "<strong>Maqam Nikriz</strong> (shared name in Arabic &amp; Turkish systems). No quarter-tones — an augmented 2nd between the 3rd and raised 4th gives a sparkling color." },
+
+            "Dastgah-e Shur (Persian)": { intervals: [0,3,6,10,14,17,20],
+                dronePositions: [{interval:0, label:"Shahed = tonic itself (the daramad's shahed and ist both fall on the root)"}],
+                desc: "<strong>Dastgah-e Shur (Persian):</strong> The most fundamental Persian modal framework. Its 2nd and 6th degrees are true neutral ('koron') intervals — this is one of the most microtonal dastgahs, not a semitone scale. (Its shape closely matches Maqam Bayati, a well-documented cross-tradition correspondence.)" },
+            "Dastgah-e Homayoun (Persian)": { intervals: [0,2,8,10,14,15,22],
+                dronePositions: [{interval:2, label:"Shahed — flat 2nd degree (Homayoun's signature emphasized tone)"}],
+                desc: "<strong>Dastgah-e Homayoun (Persian):</strong> Shares its lower augmented-2nd shape with Maqam Hijaz, but its 6th degree is traditionally a neutral pitch — placed here at 750¢ (one quarter-tone below a major 6th), the most commonly cited value. Persian sources vary on its exact size more than Arabic maqam theory typically does, so treat this specific degree as an informed approximation rather than a fixed standard." },
+
+            "Tizita (Ethiopian Qenet)": { intervals: [0,4,10,14,18],
+                dronePositions: [{interval:0, label:"Tonic — qenet has no formalized secondary drone/ghammaz system; the tonic itself is the resting tone"}],
+                desc: "<strong>Ethiopian Qenet:</strong> One of the four core pentatonic modal families of Amhara secular and liturgical music. Tizita has an open, wistful, nostalgic character — its name literally means 'nostalgia' or 'longing', and gives its name to a whole genre of songs." },
+            "Bati Major (Ethiopian Qenet)": { intervals: [0,8,10,14,22],
+                dronePositions: [{interval:0, label:"Tonic — qenet has no formalized secondary drone/ghammaz system; the tonic itself is the resting tone"}],
+                desc: "<strong>Ethiopian Qenet:</strong> Distinguished by two wide major-3rd gaps — one right off the tonic, another leading up to its major-7th degree just below the octave. One of the four core qenet families, widely used in Amhara secular song." },
+            "Ambassel (Ethiopian Qenet)": { intervals: [0,2,10,14,16],
+                dronePositions: [{interval:0, label:"Tonic — qenet has no formalized secondary drone/ghammaz system; the tonic itself is the resting tone"}],
+                desc: "<strong>Ethiopian Qenet:</strong> Opens with a minor 2nd right off the tonic, then leaps to a perfect 4th — one of the four core qenet families, often associated with solemn or devotional songs." },
+            "Anchihoye (Ethiopian Qenet)": { intervals: [0,2,10,12,18],
+                dronePositions: [{interval:0, label:"Tonic — qenet has no formalized secondary drone/ghammaz system; the tonic itself is the resting tone"}],
+                desc: "<strong>Ethiopian Qenet:</strong> The most angular-sounding of the four core qenet families, with a flattened 2nd and a tritone leap before resolving upward — often used in more energetic secular songs." },
+
+            "Hirajoshi (Japanese)": { intervals: [0,4,6,14,16],
+                dronePositions: [{interval:0, label:"Tonic — traditional koto/shamisen accompaniment is a sustained drone on the tonic"}],
+                desc: "<strong>Japanese Hirajōshi:</strong> A koto/shamisen tuning scale built from two half-steps set against wider gaps, giving it a distinctive melancholic, austere character quite unlike the semitone-free pentatonics elsewhere in this list." },
+            "In / Insen (Japanese)": { intervals: [0,2,10,14,20],
+                dronePositions: [{interval:0, label:"Tonic — traditional koto/shamisen/shakuhachi accompaniment is a sustained drone on the tonic"}],
+                desc: "<strong>Japanese In (Insen):</strong> A shakuhachi/koto scale closely related to the Hirajoshi family, with a minor 2nd and minor 7th giving it a dark, contemplative quality." },
+            "Iwato (Japanese)": { intervals: [0,2,10,12,20],
+                dronePositions: [{interval:0, label:"Tonic — traditional koto accompaniment is a sustained drone on the tonic"}],
+                desc: "<strong>Japanese Iwato:</strong> A mode of Hirajōshi (same five pitches, rooted on a different degree), used in traditional koto music. Its flattened 2nd and 5th give it a tense, mysterious character often used in ceremonial or dramatic contexts." },
+
+            "Hungarian Minor": { intervals: [0,4,6,12,14,16,22],
+                dronePositions: [{interval:0, label:"Tonic (no distinct secondary drone convention documented for this scale)"}],
+                desc: "<strong>Hungarian (Gypsy) Minor:</strong> A harmonic minor scale with a raised 4th, giving it two augmented 2nds — unlike any single maqam in this list, which has at most one. A hallmark of Central European Romani and Klezmer-adjacent music." }
+        };
+
+        //////////////////////////////////////////////////////////
+        // INSTRUMENT CONFIGS
+        //////////////////////////////////////////////////////////
+        const instruments = {
+            guitar: {
+                edo: 12,
+                notesMaster: NOTE_12,
+                tuning: ["E","B","G","D","A","E"],
+                stringThicknesses: ["1px","1.5px","2px","2.5px","3px","3.5px"],
+                totalPositions: 15,
+                defaultRoot: "E",
+                singleMarkers: [3,5,7,9,15],
+                doubleMarkers: [12]
+            },
+            oud: {
+                edo: 24,
+                notesMaster: NOTE_24,
+                tuning: ["D","A","E","B","F#","C#"],
+                totalPositions: 48,
+                defaultRoot: "D",
+                scaleLength: 2800
+            }
+        };
+
+        let currentKey = "guitar";
+
+        const scaleSelect = document.getElementById('scale-select');
+        const rootSelect = document.getElementById('root-select');
+        const fretboardEl = document.getElementById('fretboard');
+        const fretNumbersEl = document.getElementById('fret-numbers');
+        const oudBoardEl = document.getElementById('oud-board');
+        const infoPanel = document.getElementById('info-panel');
+        const btnGuitar = document.getElementById('btnGuitar');
+        const btnOud = document.getElementById('btnOud');
+        const droneSelect = document.getElementById('drone-select');
+        const droneOptionGroup = document.getElementById('drone-option-group');
+        const droneOptionSelect = document.getElementById('drone-option-select');
+        let droneOptionIndex = 0;
+
+        //////////////////////////////////////////////////////////
+        // ROOT NOTE TRANSLATION BETWEEN 12-EDO AND 24-EDO
+        //////////////////////////////////////////////////////////
+        function to24Index(noteName, edo){
+            if (edo === 24) return NOTE_24.indexOf(noteName);
+            return NOTE_12.indexOf(noteName) * 2;
+        }
+        function fromIndex24(index24, targetEdo){
+            if (targetEdo === 24) return NOTE_24[((index24 % 24) + 24) % 24];
+            const rounded = Math.round(index24 / 2) % 12;
+            return NOTE_12[((rounded % 12) + 12) % 12];
+        }
+        function translateRoot(noteName, fromEdo, toEdo){
+            if (fromEdo === toEdo) return noteName;
+            return fromIndex24(to24Index(noteName, fromEdo), toEdo);
+        }
+
+        //////////////////////////////////////////////////////////
+        // POPULATE DROPDOWNS
+        //////////////////////////////////////////////////////////
+        function populateScaleOptions(){
+            const prev = scaleSelect.value;
+            scaleSelect.innerHTML = '';
+            Object.keys(scalesData).forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                scaleSelect.appendChild(opt);
+            });
+            if (prev && scalesData[prev]) scaleSelect.value = prev;
+        }
+
+        function populateRootOptions(cfg, desiredRoot){
+            rootSelect.innerHTML = '';
+            cfg.notesMaster.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = cfg.edo === 24 ? rootLabel24(name) : name;
+                rootSelect.appendChild(opt);
+            });
+            rootSelect.value = desiredRoot;
+        }
+
+        //////////////////////////////////////////////////////////
+        // DRONE / PEDAL TONE LOCK
+        //////////////////////////////////////////////////////////
+        function populateDroneOptions(cfg, desiredValue){
+            const prev = desiredValue !== undefined ? desiredValue : droneSelect.value;
+            droneSelect.innerHTML = '';
+            const noneOpt = document.createElement('option');
+            noneOpt.value = "";
+            noneOpt.textContent = "---- (none)";
+            droneSelect.appendChild(noneOpt);
+            cfg.notesMaster.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = cfg.edo === 24 ? rootLabel24(name) : name;
+                droneSelect.appendChild(opt);
+            });
+            droneSelect.value = (prev && cfg.notesMaster.includes(prev)) ? prev : "";
+        }
+
+        function refreshGhammazOptions(scale){
+            const positions = scale.dronePositions || [{interval:0, label:"Tonic"}];
+            if (positions.length > 1 && droneSelect.value !== ""){
+                droneOptionGroup.style.display = '';
+                droneOptionSelect.innerHTML = '';
+                positions.forEach((p, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = p.label;
+                    droneOptionSelect.appendChild(opt);
+                });
+                if (droneOptionIndex >= positions.length) droneOptionIndex = 0;
+                droneOptionSelect.value = droneOptionIndex;
+            } else {
+                droneOptionGroup.style.display = 'none';
+            }
+        }
+
+        function applyDroneLock(cfg, scale){
+            if (droneSelect.value === "") return false;
+            const positions = scale.dronePositions || [{interval:0, label:"Tonic"}];
+            const chosen = positions[droneOptionIndex] || positions[0];
+            const droneIndex24 = to24Index(droneSelect.value, cfg.edo);
+            const rootIndex24 = ((droneIndex24 - chosen.interval) % 24 + 24) % 24;
+            rootSelect.value = fromIndex24(rootIndex24, cfg.edo);
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////
+        // GUITAR RENDER (equal-width, semitone-rounded, approx flagged
+        // with directional arrow showing which way the true pitch sits)
+        //////////////////////////////////////////////////////////
+        function guitarApproxMap(intervals24){
+            const map = {};
+            intervals24.forEach(i => {
+                const semitone = Math.round(i / 2) % 12;
+                const isApprox = (i % 2 !== 0);
+                let direction = null;
+                if (isApprox){
+                    const trueCents = i * 50;
+                    const shownCents = Math.round(i / 2) * 100;
+                    direction = trueCents < shownCents ? 'down' : (trueCents > shownCents ? 'up' : null);
+                }
+                if (!(semitone in map) || isApprox) map[semitone] = { isApprox, direction };
+            });
+            return map;
+        }
+
+        function buildGuitar(cfg, scale){
+            fretboardEl.innerHTML = '';
+            fretboardEl.style.gridTemplateRows = `repeat(${cfg.tuning.length}, 40px)`;
+
+            const rootIndex = cfg.notesMaster.indexOf(rootSelect.value);
+            const approxMap = guitarApproxMap(scale.intervals);
+
+            cfg.tuning.forEach((openNote, stringIdx) => {
+                const stringEl = document.createElement('div');
+                stringEl.className = 'string';
+                stringEl.style.setProperty('--string-thickness', cfg.stringThicknesses[stringIdx]);
+                const openNoteIndex = cfg.notesMaster.indexOf(openNote);
+
+                for (let pos = 0; pos <= cfg.totalPositions; pos++){
+                    const fretEl = document.createElement('div');
+                    fretEl.className = 'fret' + (pos === 0 ? ' fret-0' : '');
+                    if (pos !== 0) fretEl.classList.add('wire');
+
+                    const noteIndex = (openNoteIndex + pos) % 12;
+                    const interval = (noteIndex - rootIndex + 12) % 12;
+                    const noteName = cfg.notesMaster[noteIndex];
+
+                    const noteEl = document.createElement('div');
+                    noteEl.className = 'note';
+                    noteEl.title = noteName;
+
+                    if (interval in approxMap){
+                        const { isApprox, direction } = approxMap[interval];
+                        noteEl.classList.add('active-scale');
+                        if (isApprox) noteEl.classList.add('micro');
+                        if (interval === 0) noteEl.classList.add('is-root');
+                        const arrow = direction === 'down' ? '↓' : (direction === 'up' ? '↑' : '');
+                        noteEl.textContent = noteName + (isApprox ? arrow : '');
+                        if (isApprox) noteEl.title = `${noteName} — true pitch is a quarter-tone ${direction === 'down' ? 'below' : 'above'} this fret`;
+                    } else {
+                        noteEl.textContent = noteName;
+                    }
+
+                    fretEl.appendChild(noteEl);
+
+                    if (stringIdx === cfg.tuning.length - 1){
+                        if (cfg.singleMarkers.includes(pos)){
+                            const dot = document.createElement('div');
+                            dot.className = 'marker-dot';
+                            fretEl.appendChild(dot);
+                        }
+                        if (cfg.doubleMarkers.includes(pos)){
+                            const dTop = document.createElement('div');
+                            dTop.className = 'marker-double-top';
+                            const dBot = document.createElement('div');
+                            dBot.className = 'marker-double-bottom';
+                            fretEl.appendChild(dTop);
+                            fretEl.appendChild(dBot);
+                        }
+                    }
+                    stringEl.appendChild(fretEl);
+                }
+                fretboardEl.appendChild(stringEl);
+            });
+
+            fretNumbersEl.innerHTML = '';
+            for (let pos = 0; pos <= cfg.totalPositions; pos++){
+                const numEl = document.createElement('div');
+                numEl.className = 'fret-num' + (pos === 0 ? ' fret-num-0' : '');
+                numEl.textContent = pos === 0 ? 'OPEN' : String(pos);
+                fretNumbersEl.appendChild(numEl);
+            }
+
+            return Object.values(approxMap).some(v => v.isApprox);
+        }
+<!--SGMAPPEND-->

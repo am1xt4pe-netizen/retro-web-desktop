@@ -55,6 +55,44 @@
             <input type="text" id="bg-image" value="<%= h(@desktop['background_image'] || '') %>" placeholder="https://..." onchange="updateDesktop()">
           </div>
           <div class="form-group">
+            <label>Wallpaper Presets</label>
+            <div class="preset-group-label">VHS / CRT</div>
+            <div class="bg-preset-grid">
+              <% @backgrounds.select { |b| b['category'] == 'vhs' }.each do |bg| %>
+                <button type="button" class="bg-preset" title="<%= h bg['name'] %>" onclick="applyPreset(this)" data-url="<%= h bg_preset_value(bg) %>" style="<%= bg_preset_style(bg_preset_value(bg)) %>">
+                  <span class="bg-preset-name"><%= h bg['name'] %></span>
+                </button>
+              <% end %>
+            </div>
+            <div class="preset-group-label">Classics</div>
+            <div class="bg-preset-grid">
+              <% @backgrounds.reject { |b| b['category'] == 'vhs' }.each do |bg| %>
+                <button type="button" class="bg-preset" title="<%= h bg['name'] %>" onclick="applyPreset(this)" data-url="<%= h bg_preset_value(bg) %>" style="<%= bg_preset_style(bg_preset_value(bg)) %>">
+                  <span class="bg-preset-name"><%= h bg['name'] %></span>
+                </button>
+              <% end %>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Upload Wallpaper</label>
+            <input type="file" id="wallpaper-file" accept="image/*">
+            <div class="btn-row">
+              <button type="button" class="btn btn-sm btn-primary" onclick="uploadWallpaper()">⬆ Upload &amp; Apply</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="removeWallpaper()">Remove Current</button>
+            </div>
+            <% unless @wallpapers.empty? %>
+              <div class="preset-group-label">My Uploads</div>
+              <div class="bg-preset-grid">
+                <% @wallpapers.each do |wp| %>
+                  <button type="button" class="bg-preset has-image" title="<%= h wp['filename'] %>" onclick="applyWallpaper(<%= wp['id'] %>)">
+                    <img src="/api/desktop/<%= @desktop['id'] %>/wallpaper/<%= wp['id'] %>" alt="<%= h wp['filename'] %>">
+                    <span class="bg-preset-name"><%= h wp['filename'] %></span>
+                  </button>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+          <div class="form-group">
             <label>Background Style</label>
             <select id="bg-style" onchange="updateDesktop()">
               <option value="stretch" <%= @desktop['wallpaper_style'] == 'stretch' ? 'selected' : '' %>>Stretch</option>
@@ -230,6 +268,13 @@
 
         <!-- Games Tab -->
         <div class="tab-content" id="tab-games">
+          <h3>Quick Add</h3>
+          <p class="help-text">One click adds a classic from the Internet Arcade.</p>
+          <div class="curated-chips">
+            <% @curated_games.each do |curated_id, curated_title, curated_platform, curated_year| %>
+              <button type="button" class="chip" onclick="quickAddGame('<%= js_attr curated_id %>', '<%= js_attr curated_title %>', '<%= js_attr curated_platform %>')"><%= h curated_title %> <span class="chip-year"><%= h curated_year %></span></button>
+            <% end %>
+          </div>
           <h3>Add Retro Game</h3>
           <p class="help-text">Add games from the Internet Archive. Search for games and copy the identifier.</p>
           <div class="form-group">
@@ -512,6 +557,50 @@
     if (!confirm('Remove this game?')) return;
     fetch(`/api/desktop/${desktopId}/game/${id}`, { method: 'DELETE' })
       .then(() => location.reload());
+  }
+
+  function applyPreset(el) {
+    document.getElementById('bg-image').value = el.dataset.url;
+    updateDesktop();
+  }
+
+  function uploadWallpaper() {
+    const fileInput = document.getElementById('wallpaper-file');
+    if (!fileInput.files[0]) { alert('Please choose an image'); return; }
+    const form = new FormData();
+    form.append('wallpaper', fileInput.files[0]);
+    fetch(`/api/desktop/${desktopId}/wallpaper`, { method: 'POST', body: form })
+      .then(r => r.json().then(d => { if (!r.ok) throw new Error(d.error || 'Upload failed'); return d; }))
+      .then(() => location.reload())
+      .catch(err => alert(err.message));
+  }
+
+  function applyWallpaper(id) {
+    fetch(`/api/desktop/${desktopId}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ background_image: `/api/desktop/${desktopId}/wallpaper/${id}` })
+    }).then(() => location.reload());
+  }
+
+  function removeWallpaper() {
+    const current = document.getElementById('bg-image').value;
+    const match = current.match(/\/wallpaper\/(\d+)$/);
+    if (match) {
+      if (!confirm('Delete this uploaded wallpaper?')) return;
+      fetch(`/api/desktop/${desktopId}/wallpaper/${match[1]}`, { method: 'DELETE' })
+        .then(() => location.reload());
+    } else {
+      document.getElementById('bg-image').value = '';
+      updateDesktop();
+    }
+  }
+
+  function quickAddGame(gameId, gameTitle, platform) {
+    document.getElementById('game-id').value = gameId;
+    document.getElementById('game-title').value = gameTitle;
+    document.getElementById('game-platform').value = platform;
+    addGame();
   }
 
   function saveDesktop() {
