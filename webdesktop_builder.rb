@@ -326,6 +326,27 @@ helpers do
     end
   end
 
+  # Normalize the editor's background field into safe CSS fragments for the
+  # published and exported desktop templates.
+  def background_image_props(value)
+    raw = value.to_s.strip
+    return {} if raw.empty?
+
+    if raw.match?(/\Ahttps?:\/\/[^\s"'<>]+\z/i)
+      return { 'image' => %(url("#{h(raw)}")) }
+    end
+
+    if raw.match?(/\A(?:linear|radial|repeating-linear|repeating-radial)-gradient\([a-z0-9#%,.\s()+\-\/]+\)\z/i)
+      return { 'image' => raw }
+    end
+
+    if raw.match?(/\A#[0-9a-f]{3,8}\z/i)
+      return { 'color' => raw }
+    end
+
+    {}
+  end
+
   # Escapes plain-text fields (names, titles, captions) that get interpolated
   # into HTML/attributes. NOT used on rich-text document content, which is
   # expected to contain formatting HTML from the WYSIWYG editor by design.
